@@ -71,6 +71,8 @@ struct nfs_parsed_mount_data {
 	int			timeo, retrans;
 	int			acregmin, acregmax,
 				acdirmin, acdirmax;
+	int			nfs_prog;
+	int			mount_prog;
 	int			namlen;
 	unsigned int		options;
 	unsigned int		bsize;
@@ -116,7 +118,7 @@ struct nfs_mount_request {
 	rpc_authflavor_t	*auth_flavs;
 };
 
-extern int nfs_mount(struct nfs_mount_request *info);
+extern int nfs_mount(struct nfs_mount_request *info, int prog);
 extern void nfs_umount(const struct nfs_mount_request *info);
 
 /* client.c */

@@ -105,6 +105,7 @@ struct nfs_client_initdata {
 	const struct nfs_rpc_ops *rpc_ops;
 	int proto;
 	u32 minorversion;
+	int nfs_prog;
 };
 
 /*
@@ -123,6 +124,7 @@ static struct nfs_client *nfs_alloc_client(const struct nfs_client_initdata *cl_
 		goto error_0;
 
 	clp->rpc_ops = cl_init->rpc_ops;
+	clp->nfs_prog = cl_init->nfs_prog;
 
 	atomic_set(&clp->cl_count, 1);
 	clp->cl_cons_state = NFS_CS_INITING;
@@ -448,6 +450,9 @@ static struct nfs_client *nfs_match_client(const struct nfs_client_initdata *dat
 		/* Match nfsv4 minorversion */
 		if (clp->cl_minorversion != data->minorversion)
 			continue;
+		if (clp->nfs_prog != data->nfs_prog)
+			continue;
+
 		/* Match the full socket address */
 		if (!nfs_sockaddr_cmp(sap, clap))
 			continue;
@@ -618,6 +623,10 @@ static int nfs_create_rpc_client(struct nfs_client *clp,
 	if (!IS_ERR(clp->cl_rpcclient))
 		return 0;
 
+	if (clp->nfs_prog)
+		nfs_program.number = clp->nfs_prog;
+	else
+		nfs_program.number = NFS_PROGRAM;
 	clnt = rpc_create(&args);
 	if (IS_ERR(clnt)) {
 		dprintk("%s: cannot create RPC client. Error = %ld\n",
@@ -786,6 +795,7 @@ static int nfs_init_server(struct nfs_server *server,
 		.addrlen = data->nfs_server.addrlen,
 		.rpc_ops = &nfs_v2_clientops,
 		.proto = data->nfs_server.protocol,
+		.nfs_prog = data->nfs_prog,
 	};
 	struct rpc_timeout timeparms;
 	struct nfs_client *clp;

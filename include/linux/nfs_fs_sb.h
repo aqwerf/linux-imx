@@ -41,6 +41,7 @@ struct nfs_client {
 
 	u32			cl_minorversion;/* NFSv4 minorversion */
 	struct rpc_cred		*cl_machine_cred;
+	int			nfs_prog;
 
 #ifdef CONFIG_NFS_V4
 	u64			cl_clientid;	/* constant */
