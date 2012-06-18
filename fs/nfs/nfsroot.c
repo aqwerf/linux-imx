@@ -506,7 +506,7 @@ static int __init root_nfs_get_handle(void)
 	if (!request.fh)
 		goto out;
 	set_sockaddr(&sin, servaddr, htons(mount_port));
-	status = nfs_mount(&request);
+	status = nfs_mount(&request, NFS_MNT_PROGRAM);
 	if (status < 0)
 		printk(KERN_ERR "Root-NFS: Server returned error %d "
 				"while mounting %s\n", status, nfs_export_path);
