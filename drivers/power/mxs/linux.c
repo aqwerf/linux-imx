@@ -986,8 +986,7 @@ static int mxs_bat_probe(struct platform_device *pdev)
 
 
 	info->onboard_vbus5v = regulator_get(NULL, "vbus5v");
-	if (IS_ERR(info->regulator)) {
-
+	if (IS_ERR(info->onboard_vbus5v)) {
 		pr_debug("No onboard vbus 5v reg provided\n");
 		info->onboard_vbus5v = NULL;
 	}
