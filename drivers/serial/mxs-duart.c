@@ -529,6 +529,38 @@ static int duart_verify_port(struct uart_port *port, struct serial_struct *ser)
 	return ret;
 }
 
+#ifdef CONFIG_CONSOLE_POLL
+static int duart_get_poll_char(struct uart_port *port)
+{
+	unsigned int status;
+
+	if (!(__raw_readl(port->membase + HW_UARTDBGCR) & BM_UARTDBGCR_RXE)) {
+		u32 cr = BM_UARTDBGCR_UARTEN | BM_UARTDBGCR_RXE |
+			BM_UARTDBGCR_TXE;
+		__raw_writel(cr, port->membase + HW_UARTDBGCR);
+	}
+
+	status = __raw_readl(port->membase + HW_UARTDBGFR);
+	if (status & BM_UARTDBGFR_RXFE)
+		return NO_POLL_CHAR;
+
+	return __raw_readl(port->membase + HW_UARTDBGDR);
+}
+
+static void duart_put_poll_char(struct uart_port *port,
+			 unsigned char ch)
+{
+	unsigned int status;
+
+	do {
+		status = __raw_readl(port->membase + HW_UARTDBGFR);
+	} while (status & BM_UARTDBGFR_TXFF);
+
+	__raw_writel(ch, port->membase + HW_UARTDBGDR);
+}
+
+#endif /* CONFIG_CONSOLE_POLL */
+
 static struct uart_ops duart_pops = {
 	.tx_empty = duart_tx_empty,
 	.set_mctrl = duart_set_mctrl,
@@ -546,6 +578,10 @@ static struct uart_ops duart_pops = {
 	.request_port = duart_request_port,
 	.config_port = duart_config_port,
 	.verify_port = duart_verify_port,
+#ifdef CONFIG_CONSOLE_POLL
+	.poll_get_char = duart_get_poll_char,
+	.poll_put_char = duart_put_poll_char,
+#endif
 };
 
 static struct duart_port duart_port = {
