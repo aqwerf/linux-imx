@@ -15,6 +15,10 @@
  * http://www.opensource.org/licenses/gpl-license.html
  * http://www.gnu.org/copyleft/gpl.html
  */
+#if defined(CONFIG_SERIAL_MXS_AUART_CONSOLE) && defined(CONFIG_MAGIC_SYSRQ)
+#define SUPPORT_SYSRQ
+#endif
+
 #include <linux/kernel.h>
 #include <linux/device.h>
 #include <linux/errno.h>
@@ -602,6 +606,13 @@ static irqreturn_t mxs_auart_irq_handle(int irq, void *context)
 		mxs_auart_tx_chars(s);
 		istat &= ~BM_UARTAPP_INTR_TXIS;
 	}
+
+	if (istat & BM_UARTAPP_INTR_BEIS) {
+		s->port.icount.brk++;
+		uart_handle_break(&s->port);
+		istat &= ~BM_UARTAPP_INTR_BEIS;
+	}
+
 	/* modem status interrupt bits are undefined
 	after reset,and the hardware do not support
 	DSRMIS,DCDMIS and RIMIS bit,so we should ingore
@@ -804,6 +815,39 @@ static void mxs_auart_enable_ms(struct uart_port *port)
 	/* just empty */
 }
 
+#ifdef CONFIG_CONSOLE_POLL
+static int mxs_auart_get_poll_char(struct uart_port *u)
+{
+	unsigned int status;
+
+	if ((__raw_readl(u->membase + HW_UARTAPP_CTRL2_SET) &
+	     BM_UARTAPP_CTRL2_RXE) == 0) {
+		__raw_writel(BM_UARTAPP_CTRL2_UARTEN | BM_UARTAPP_CTRL2_TXE |
+			     BM_UARTAPP_CTRL2_RXE,
+			     u->membase + HW_UARTAPP_CTRL2_SET);
+	}
+
+	status = __raw_readl(u->membase + HW_UARTAPP_STAT);
+	if (status & BM_UARTAPP_STAT_RXFE)
+		return NO_POLL_CHAR;
+
+	return __raw_readl(u->membase + HW_UARTAPP_DATA);
+}
+
+static void mxs_auart_put_poll_char(struct uart_port *u,
+			 unsigned char ch)
+{
+	unsigned int status;
+
+	do {
+		status = __raw_readl(u->membase + HW_UARTAPP_STAT);
+	} while (status & BM_UARTAPP_STAT_TXFF);
+
+	__raw_writel(ch, u->membase + HW_UARTAPP_DATA);
+}
+
+#endif /* CONFIG_CONSOLE_POLL */
+
 static struct uart_ops mxs_auart_ops = {
 	.tx_empty       = mxs_auart_tx_empty,
 	.start_tx       = mxs_auart_start_tx,
@@ -821,6 +865,10 @@ static struct uart_ops mxs_auart_ops = {
 	.request_port   = mxs_auart_request_port,
 	.config_port    = mxs_auart_config_port,
 	.verify_port    = mxs_auart_verify_port,
+#ifdef CONFIG_CONSOLE_POLL
+	.poll_get_char = mxs_auart_get_poll_char,
+	.poll_put_char = mxs_auart_put_poll_char,
+#endif
 };
 #ifdef CONFIG_SERIAL_MXS_AUART_CONSOLE
 static struct mxs_auart_port auart_port[CONFIG_MXS_AUART_PORTS] = {};
