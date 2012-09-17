@@ -123,6 +123,7 @@ enum {
 	/* Options that take integer arguments */
 	Opt_port, Opt_rsize, Opt_wsize, Opt_timeo, Opt_retrans, Opt_acregmin,
 	Opt_acregmax, Opt_acdirmin, Opt_acdirmax,
+	Opt_mountprog, Opt_nfsprog,
 	/* Options that take no arguments */
 	Opt_soft, Opt_hard, Opt_intr,
 	Opt_nointr, Opt_posix, Opt_noposix, Opt_cto, Opt_nocto, Opt_ac, 
@@ -142,6 +143,8 @@ static const match_table_t tokens __initconst = {
 	{Opt_acregmax, "acregmax=%u"},
 	{Opt_acdirmin, "acdirmin=%u"},
 	{Opt_acdirmax, "acdirmax=%u"},
+	{Opt_mountprog, "mountprog=%u"},
+	{Opt_nfsprog, "nfsprog=%u"},
 	{Opt_soft, "soft"},
 	{Opt_hard, "hard"},
 	{Opt_intr, "intr"},
@@ -224,6 +227,12 @@ static int __init root_nfs_parse(char *name, char *buf)
 			case Opt_acdirmax:
 				nfs_data.acdirmax = option;
 				break;
+			case Opt_mountprog:
+				nfs_data.mount_prog = option;
+				break;
+			case Opt_nfsprog:
+				nfs_data.nfs_prog = option;
+				break;
 			case Opt_soft:
 				nfs_data.flags |= NFS_MOUNT_SOFT;
 				break;
@@ -304,6 +313,8 @@ static int __init root_nfs_name(char *name)
 	nfs_data.acregmax = NFS_DEF_ACREGMAX;
 	nfs_data.acdirmin = NFS_DEF_ACDIRMIN;
 	nfs_data.acdirmax = NFS_DEF_ACDIRMAX;
+	nfs_data.nfs_prog = NFS_PROGRAM;
+	nfs_data.mount_prog = NFS_MNT_PROGRAM;
 	strcpy(buf, NFS_ROOT);
 
 	/* Process options received from the remote server */
@@ -460,7 +471,7 @@ static int __init root_nfs_ports(void)
 	proto = (nfs_data.flags & NFS_MOUNT_TCP) ? IPPROTO_TCP : IPPROTO_UDP;
 
 	if (nfs_port < 0) {
-		if ((port = root_nfs_getport(NFS_PROGRAM, nfsd_ver, proto)) < 0) {
+		if ((port = root_nfs_getport(nfs_data.nfs_prog, nfsd_ver, proto)) < 0) {
 			printk(KERN_ERR "Root-NFS: Unable to get nfsd port "
 					"number from server, using default\n");
 			port = nfsd_port;
@@ -470,7 +481,7 @@ static int __init root_nfs_ports(void)
 			"as nfsd port\n", port);
 	}
 
-	if ((port = root_nfs_getport(NFS_MNT_PROGRAM, mountd_ver, proto)) < 0) {
+	if ((port = root_nfs_getport(nfs_data.mount_prog, mountd_ver, proto)) < 0) {
 		printk(KERN_ERR "Root-NFS: Unable to get mountd port "
 				"number from server, using default\n");
 		port = mountd_port;
@@ -506,7 +517,7 @@ static int __init root_nfs_get_handle(void)
 	if (!request.fh)
 		goto out;
 	set_sockaddr(&sin, servaddr, htons(mount_port));
-	status = nfs_mount(&request, NFS_MNT_PROGRAM);
+	status = nfs_mount(&request, nfs_data.mount_prog);
 	if (status < 0)
 		printk(KERN_ERR "Root-NFS: Server returned error %d "
 				"while mounting %s\n", status, nfs_export_path);
