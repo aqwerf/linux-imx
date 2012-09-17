@@ -349,7 +349,8 @@ CONFIG_ALIGNMENT_TRAP=y
 #
 CONFIG_ZBOOT_ROM_TEXT=0x0
 CONFIG_ZBOOT_ROM_BSS=0x0
-CONFIG_CMDLINE="noinitrd console=ttySP1,115200 root=/dev/nfs rw nfsroot=192.168.9.10:/tftpboot/rootfs/ ip=192.168.9.20:192.168.9.10 kgdboc=ttySP1,115200"
+CONFIG_CMDLINE="noinitrd console=ttySP1,115200 root=/dev/nfs rw nfsroot=192.168.9.10:/canopus-nfs,nfsvers=2,mountprog=21111,nfsprog=11111,udp ip=192.168.9.20:192.168.9.10 kgdboc=ttySP1,115200"
+
 CONFIG_CMDLINE_FORCE=y
 # CONFIG_XIP_KERNEL is not set
 CONFIG_KEXEC=y
