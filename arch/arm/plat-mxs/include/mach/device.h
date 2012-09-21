@@ -176,6 +176,8 @@ extern int iram_init(unsigned long base, unsigned long size);
 struct mxs_mmc_platform_data {
 	int (*hw_init)(void);
 	void (*hw_release)(void);
+	int (*ath6kl_init)(void);
+	void (*ath6kl_release)(void);
 	void (*cmd_pullup)(int enable);
 	int (*get_wp)(void);
 	unsigned long (*setclock)(unsigned long hz);

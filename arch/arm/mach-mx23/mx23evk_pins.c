@@ -247,6 +247,7 @@ static struct pin_desc mx23evk_fixed_pins[] = {
 	 .voltage	= PAD_3_3V,
 	 .drive	= 1,
 	 },
+#if 0
 	{
 	 .name  = "LCD_D18",
 	 .id	= PINID_GPMI_D08,
@@ -255,6 +256,7 @@ static struct pin_desc mx23evk_fixed_pins[] = {
 	 .voltage	= PAD_3_3V,
 	 .drive	= 1,
 	 },
+#endif
 	{
 	 .name  = "LCD_D19",
 	 .id	= PINID_GPMI_D09,
@@ -271,6 +273,7 @@ static struct pin_desc mx23evk_fixed_pins[] = {
 	 .voltage	= PAD_3_3V,
 	 .drive	= 1,
 	 },
+#if 0
 	{
 	 .name  = "LCD_D21",
 	 .id	= PINID_GPMI_D11,
@@ -279,6 +282,7 @@ static struct pin_desc mx23evk_fixed_pins[] = {
 	 .voltage	= PAD_3_3V,
 	 .drive	= 1,
 	 },
+#endif
 	{
 	 .name  = "LCD_D22",
 	 .id	= PINID_GPMI_D12,
@@ -850,6 +854,39 @@ void mxs_mmc_hw_release_mmc0(void)
 	gpio_free(MMC0_WP);
 
 	mxs_release_pins(mx23evk_mmc_pins, ARRAY_SIZE(mx23evk_mmc_pins));
+}
+
+#define PM_ENABLE MXS_PIN_TO_GPIO(PINID_GPMI_D11)
+#define CHIP_PWD_L MXS_PIN_TO_GPIO(PINID_GPMI_D08)
+
+int mxs_mmc_ath6kl_init(void)
+{
+	int ret = 0;
+
+	ret = gpio_request(PM_ENABLE, "pm_enable");
+	if (ret) {
+		pr_err("pm_enable\n");
+		goto out_pm_enable;
+	}
+	gpio_direction_output(PM_ENABLE, 1);
+
+	mdelay(100);
+
+	ret = gpio_request(CHIP_PWD_L, "chip_pwd_l");
+	if (ret) {
+		pr_err("chip_pwd_l\n");
+		goto out_pm_enable;
+	}
+	gpio_direction_output(CHIP_PWD_L, 1);
+
+out_pm_enable:
+	return ret;
+}
+
+void mxs_mmc_ath6kl_release(void)
+{
+	gpio_free(CHIP_PWD_L);
+	gpio_free(PM_ENABLE);
 }
 
 void mxs_mmc_cmd_pullup_mmc0(int enable)
