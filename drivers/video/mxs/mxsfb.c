@@ -532,6 +532,14 @@ static int mxsfb_ioctl(struct fb_info *info, unsigned int cmd,
 		if (!get_user(channel, (__u32 __user *) arg))
 			ret = mxsfb_wait_for_vsync(channel, info);
 		break;
+#if defined(CONFIG_FB_MXS_LCD_ILI9225B)
+	case FBIO_CHANGE_FB:
+		if (!cdata)
+			return ret;
+
+		ili9225b_lcdif_dma_send(cdata->phys_start);
+		break;
+#endif
 	default:
 		break;
 	}

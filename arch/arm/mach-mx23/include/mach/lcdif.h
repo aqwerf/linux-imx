@@ -156,6 +156,16 @@ void mxs_lcdif_notify_clients(unsigned long event,
 #define FBIO_WAITFORVSYNC		_IOW('F', 0x20, u_int32_t)
 #endif
 
+#if defined(CONFIG_FB_MXS_LCD_ILI9225B)
+#define FBIO_CHANGE_FB			_IOW('F', 81, int)
+
+int ili9225b_lcdif_dma_send(dma_addr_t addr);
+
+int mxs_lcd_gpio_init(void);
+int mxs_lcd_gpio_set(int set);
+
+#endif
+
 static inline void setup_dotclk_panel(u16 v_pulse_width,
 				      u16 v_period,
 				      u16 v_wait_cnt,

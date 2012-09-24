@@ -17,9 +17,16 @@ config FB_MXS_LCD_43WVF1G
 config FB_MXS_LCD_LMS430
 	depends on FB_MXS
 	bool "LMS430"
-	default y if ARCH_MX23
+	default n if ARCH_MX23
 	---help---
 	  Use LMS430 dotclock LCD panel for MXS
+
+config FB_MXS_LCD_ILI9225B
+	depends on FB_MXS
+	bool "ili9225b"
+	default y if ARCH_MX23
+	---help---
+	  a-Si TFT LCD Driver 176RGBx220 Resolution and 262K color
 
 config FB_MXS_TVENC
 	depends on ARCH_MXS

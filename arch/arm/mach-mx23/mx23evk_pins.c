@@ -232,6 +232,40 @@ static struct pin_desc mx23evk_fixed_pins[] = {
 	 .drive	= 1,
 	 },
 	{
+	 .name = "LCD_RESET",
+	 .id = PINID_LCD_RESET,
+	 .fun = PIN_FUN1,
+	 .strength = PAD_8MA,
+	 .voltage = PAD_3_3V,
+	 .drive	= 1,
+	 },
+#if defined(CONFIG_FB_MXS_LCD_ILI9225B)
+	{
+	 .name = "LCD_RS",
+	 .id = PINID_LCD_RS,
+	 .fun = PIN_FUN1,
+	 .strength = PAD_8MA,
+	 .voltage = PAD_3_3V,
+	 .drive	= 1,
+	 },
+	{
+	 .name = "LCD_CS",
+	 .id = PINID_LCD_CS,
+	 .fun = PIN_FUN1,
+	 .strength = PAD_8MA,
+	 .voltage = PAD_3_3V,
+	 .drive	= 1,
+	 },
+	{
+	 .name = "LCD_WR",
+	 .id = PINID_LCD_WR,
+	 .fun = PIN_FUN1,
+	 .strength = PAD_8MA,
+	 .voltage = PAD_3_3V,
+	 .drive	= 1,
+	 },
+#else
+	{
 	 .name  = "LCD_D16",
 	 .id	= PINID_LCD_D16,
 	 .fun	= PIN_FUN1,
@@ -300,14 +334,6 @@ static struct pin_desc mx23evk_fixed_pins[] = {
 	 .drive	= 1,
 	 },
 	{
-	 .name = "LCD_RESET",
-	 .id = PINID_LCD_RESET,
-	 .fun = PIN_FUN1,
-	 .strength = PAD_8MA,
-	 .voltage = PAD_3_3V,
-	 .drive	= 1,
-	 },
-	{
 	 .name = "LCD_VSYNC",
 	 .id   = PINID_LCD_VSYNC,
 	 .fun  = PIN_FUN1,
@@ -347,6 +373,7 @@ static struct pin_desc mx23evk_fixed_pins[] = {
 	 .voltage = PAD_3_3V,
 	 .drive	= 1,
 	 },
+#endif
 #endif
 
 #if defined(CONFIG_FEC) || defined(CONFIG_FEC_MODULE)
@@ -974,3 +1001,38 @@ void __init mx23evk_pins_init(void)
 {
 	mxs_request_pins(mx23evk_fixed_pins, ARRAY_SIZE(mx23evk_fixed_pins));
 }
+
+#if defined(CONFIG_FB_MXS_LCD_ILI9225B)
+static int _lcd_gpio_init;
+
+int mxs_lcd_gpio_init(void)
+{
+	int ret;
+
+	if (_lcd_gpio_init)
+		return 0;
+
+	ret = gpio_request(MXS_PIN_TO_GPIO(PINID_PWM3), "LCD_BL_ON");
+	if (ret) {
+		pr_warning("mxs_lcd_gpio_init: can not open GPIO %d\n",
+			   PINID_PWM3);
+		return -1;
+	} else {
+		_lcd_gpio_init = 1;
+		gpio_direction_output(MXS_PIN_TO_GPIO(PINID_PWM3), 0);
+	}
+
+	return 0;
+}
+
+int mxs_lcd_gpio_set(int set)
+{
+	if (!_lcd_gpio_init)
+		return 0;
+
+	gpio_set_value(MXS_PIN_TO_GPIO(PINID_PWM3), set);
+
+	return 0;
+}
+#endif
+
