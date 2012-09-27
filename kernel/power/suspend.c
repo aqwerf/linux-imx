@@ -265,6 +265,10 @@ int enter_state(suspend_state_t state)
 {
 	int error;
 
+#ifdef _WPU8000_
+	return error;
+#endif
+
 	if (!valid_state(state))
 		return -ENODEV;
 

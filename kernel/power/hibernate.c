@@ -586,6 +586,10 @@ int hibernate(void)
 {
 	int error;
 
+#ifdef _WPU8000_
+	return error;
+#endif
+
 	mutex_lock(&pm_mutex);
 	/* The snapshot device should not be opened while we're running */
 	if (!atomic_add_unless(&snapshot_device_available, -1, 0)) {
