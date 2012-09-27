@@ -48,21 +48,6 @@
 #define _DATA			0
 #define _CMD			1
 
-#define _H_RESOLUTION		176 	/* horizon pixel  x resolition */
-#define _V_RESOLUTION		220 	/* line cnt       y resolution */
-#define _VFRAME_FREQ		60	/* frame rate freq */
-#define _H_FP			8	/* front porch */
-#define _H_SW			3	/* Hsync width */
-#define _H_BP			13	/* Back porch */
-#define _V_FP			5	/* front porch */
-#define _V_SW			1	/* Vsync width */
-#define _V_BP			7	/* Back porch */
-
-#define _LCD_PIXEL_CLOCK	(_VFRAME_FREQ * \
-				(_H_FP+_H_SW+_H_BP+_H_RESOLUTION) * \
-				(_V_FP+_V_SW+_V_BP+_V_RESOLUTION))
-#define _PIXEL_CLOCK		(_VFRAME_FREQ * _LCD_PIXEL_CLOCK)
-
 #define _lcdif_write(reg, data)	__raw_writel(data, REGS_LCDIF_BASE + reg)
 #define _lcdif_read(reg)	__raw_readl(REGS_LCDIF_BASE + reg)
 
@@ -130,10 +115,11 @@ _lcd_panel_set_prepare(int x, int y)
 	_lcd_panel_data_write(_CMD, 0x22);
 }
 
+/* FIXME: remove this */
 static void
 _lcd_panel_set_logo(int is_logo, int color)
 {
-	int i = _V_RESOLUTION * _H_RESOLUTION;
+	int i = _V_ACTIVE * _H_ACTIVE;
 	u16 *logo = NULL;
 
 	logo = (u16 *)&_test_logo[12];
@@ -215,7 +201,6 @@ _lcd_panel_init_byd(void)
 	_lcd_panel_pair_write(0x0038, 0x00dc);
 	_lcd_panel_pair_write(0x0020, 0x0000); /* Set GRAM Address */
 	_lcd_panel_pair_write(0x0021, 0x0000); /* Set GRAM Address */
-	_lcd_panel_data_write(_CMD, 0x0022);
 }
 
 static void
@@ -342,11 +327,9 @@ static int
 _lcdif_dma_init(struct device *dev, dma_addr_t phys, int memsize)
 {
 	_lcdif_write(HW_LCDIF_CTRL_SET, BM_LCDIF_CTRL_LCDIF_MASTER);
-
+	_lcdif_write(HW_LCDIF_CTRL1_SET,
+		     BF_LCDIF_CTRL1_BYTE_PACKING_FORMAT(0x0f));
 	_lcdif_write(HW_LCDIF_CUR_BUF, phys);
-#if 0
-	_lcdif_write(HW_LCDIF_NEXT_BUF, phys);
-#endif
 
 	return 0;
 }
@@ -384,20 +367,18 @@ _lcdif_init_panel(struct device *dev, dma_addr_t phys, int memsize,
 		goto out;
 	}
 
-	mdelay(1);
-	_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_RESET);	/* low */
-	mdelay(10);
-	_lcdif_write(HW_LCDIF_CTRL1_SET, BM_LCDIF_CTRL1_RESET);	/* high */
-	mdelay(50);
-
 	if (_init_temp) {
+		_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_RESET);
+		mdelay(10);
+		_lcdif_write(HW_LCDIF_CTRL1_SET, BM_LCDIF_CTRL1_RESET);
+		mdelay(50);
+
 		/* for host lcdif */
 		_lcdif_setup_system_panel();
 		
 		/* for external LCD */
 		_lcd_panel_init(_LCD_BYD);
 		_lcd_panel_set_prepare(0, 0);
-		_lcd_panel_set_logo(1, 0xffff);
 
 		ret = _lcdif_dma_init(dev, phys, memsize);
 		if (ret)
@@ -545,13 +526,23 @@ ili9225b_lcdif_dma_send(dma_addr_t addr)
 	_lcdif_write(HW_LCDIF_CUR_BUF, (uint32_t)addr);
 
 	_lcdif_write(HW_LCDIF_CTRL_CLR, BM_LCDIF_CTRL_RUN);
+
+	_lcdif_write(HW_LCDIF_CTRL1_CLR,
+		     BM_LCDIF_CTRL1_BYTE_PACKING_FORMAT);
+	_lcdif_write(HW_LCDIF_CTRL1_SET,
+		     BF_LCDIF_CTRL1_BYTE_PACKING_FORMAT(0x3));
+	_lcd_panel_set_prepare(0, 0);
+
 	_lcdif_write(HW_LCDIF_CTRL_SET, BM_LCDIF_CTRL_DATA_SELECT);
 
 	_lcdif_write(HW_LCDIF_TRANSFER_COUNT,
-			BF_LCDIF_TRANSFER_COUNT_V_COUNT(_V_ACTIVE) |
-			BF_LCDIF_TRANSFER_COUNT_H_COUNT(_H_ACTIVE));
+		     BF_LCDIF_TRANSFER_COUNT_V_COUNT(_V_ACTIVE) |
+		     BF_LCDIF_TRANSFER_COUNT_H_COUNT(_H_ACTIVE));
 
 	_lcdif_write(HW_LCDIF_CTRL_SET, BM_LCDIF_CTRL_LCDIF_MASTER);
+
+	_lcdif_write(HW_LCDIF_CTRL1_SET,
+		     BF_LCDIF_CTRL1_BYTE_PACKING_FORMAT(0x0f));
 
 	_lcdif_write(HW_LCDIF_CTRL_SET, BM_LCDIF_CTRL_RUN);
 
