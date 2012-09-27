@@ -848,6 +848,8 @@ int mxs_mmc_hw_init_mmc0(void)
 
 	mxs_request_pins(mx23evk_mmc_pins, ARRAY_SIZE(mx23evk_mmc_pins));
 
+#ifdef _WPU8000_
+#if 0
 	/* Configure write protect GPIO pin */
 	ret = gpio_request(MMC0_WP, "mmc0_wp");
 	if (ret) {
@@ -865,6 +867,8 @@ int mxs_mmc_hw_init_mmc0(void)
 	}
 	gpio_direction_output(MMC0_POWER, 0);
 	mdelay(100);
+#endif
+#endif
 
 	return 0;
 
