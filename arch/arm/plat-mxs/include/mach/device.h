@@ -74,6 +74,23 @@ struct mxskbd_keypair {
 	int kcode;
 };
 
+#ifndef _WPU8000_
+#define _WPU8000_
+#endif
+#if defined(_WPU8000_)
+struct mxs_kbd_plat_data {
+	struct mxskbd_keypair *keypair;
+	int keypair_offset;
+	int channel1;
+	int channel2;
+	int channel3;
+	unsigned int btn_enable; /* detect enable bits */
+	unsigned int btn_irq_stat; /* detect irq status bits */
+	unsigned int btn_irq_ctrl; /* detect irq enable bits */
+};
+int mxs_keypad_gpio_init(void);
+int mxs_keypad_gpio_set(int set);
+#else
 struct mxs_kbd_plat_data {
 	struct mxskbd_keypair *keypair;
 	int channel;
@@ -81,6 +98,7 @@ struct mxs_kbd_plat_data {
 	unsigned int btn_irq_stat; /* detect irq status bits */
 	unsigned int btn_irq_ctrl; /* detect irq enable bits */
 };
+#endif
 
 struct mxs_touchscreen_plat_data {
 	u8 x_plus_chan;

@@ -374,6 +374,69 @@ static void __init mx23_init_lradc(void)
 #endif
 
 #if defined(CONFIG_KEYBOARD_MXS) || defined(CONFIG_KEYBOARD_MXS_MODULE)
+#ifndef _WPU8000_
+#define _WPU8000_
+#endif
+#if defined(_WPU8000_)
+static struct mxskbd_keypair keyboard_data[] = {
+	{ 0, KEY_F1 },
+	{ 233, KEY_F2 },
+	{ 848, KEY_F3 },
+	{ 1622, KEY_F4  },
+	{ 2395, KEY_LEFT },
+	{ 2980, KEY_RIGHT },
+	{ 3347, KEY_UP },
+	{ 3556, KEY_DOWN },
+	{ 0, KEY_OK },
+	{ 233, KEY_SEND },
+	{ 848, KEY_CLEAR },
+	{ 1622, KEY_NUMERIC_1 },
+	{ 2395, KEY_NUMERIC_2 },
+	{ 2980, KEY_NUMERIC_3 },
+	{ 3347, KEY_NUMERIC_4 },
+	{ 3556, KEY_NUMERIC_5 },
+	{ 0, KEY_NUMERIC_6 },
+	{ 233, KEY_NUMERIC_7 },
+	{ 848, KEY_NUMERIC_8 },
+	{ 1622, KEY_NUMERIC_9 },
+	{ 2395, KEY_NUMERIC_0 },
+	{ 2980, KEY_NUMERIC_STAR },
+	{ 3347, KEY_NUMERIC_POUND },
+	{ 3556, KEY_RESERVED },
+	{ -1, 0 },
+};
+
+static struct mxs_kbd_plat_data mxs_kbd_data = {
+	.keypair = keyboard_data,
+	.keypair_offset = 8,
+	.channel1 = LRADC_CH0,
+	.channel2 = LRADC_CH3,
+	.channel3 = LRADC_CH4,
+};
+
+static struct resource mx23_kbd_res[] = {
+	{
+	 .flags = IORESOURCE_MEM,
+	 .start = LRADC_PHYS_ADDR,
+	 .end   = LRADC_PHYS_ADDR + 0x2000 - 1,
+	 },
+	{
+	 .flags = IORESOURCE_IRQ,
+	 .start = IRQ_LRADC_CH0,
+	 .end   = IRQ_LRADC_CH0,
+	 },
+	{
+	 .flags = IORESOURCE_IRQ,
+	 .start = IRQ_LRADC_CH3,
+	 .end   = IRQ_LRADC_CH3,
+	 },
+	{
+	 .flags = IORESOURCE_IRQ,
+	 .start = IRQ_LRADC_CH4,
+	 .end   = IRQ_LRADC_CH4,
+	 },
+};
+#else
 static struct mxskbd_keypair keyboard_data[] = {
 	{ 100, KEY_F1 },
 	{ 306, KEY_RIGHT},
@@ -403,7 +466,7 @@ static struct resource mx23_kbd_res[] = {
 	 .end   = IRQ_LRADC_CH0,
 	 },
 };
-
+#endif
 static void __init mx23_init_kbd(void)
 {
 	struct platform_device *pdev;

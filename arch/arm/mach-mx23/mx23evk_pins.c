@@ -1046,3 +1046,40 @@ int mxs_lcd_gpio_set(int set)
 }
 #endif
 
+#ifndef _WPU8000_
+#define _WPU8000_
+#endif
+#if defined(_WPU8000_)
+static int _keypad_gpio_init;
+
+int mxs_keypad_gpio_init(void)
+{
+	int ret;
+
+	if (_keypad_gpio_init)
+		return 0;
+
+	ret = gpio_request(MXS_PIN_TO_GPIO(PINID_GPMI_CE2N), "KEY_BL_ON");
+	if (ret) {
+		pr_warning("mxs_keypad_gpio_init: can not open GPIO %d\n",
+			   PINID_GPMI_CE2N);
+		return -1;
+	} else {
+		_keypad_gpio_init = 1;
+		gpio_direction_output(MXS_PIN_TO_GPIO(PINID_GPMI_CE2N), 0);
+	}
+
+	return 0;
+}
+
+int mxs_keypad_gpio_set(int set)
+{
+	if (!_keypad_gpio_init)
+		return 0;
+
+	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_CE2N), set);
+
+	return 0;
+}
+#endif
+
