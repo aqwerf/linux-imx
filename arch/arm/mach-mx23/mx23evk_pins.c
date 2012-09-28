@@ -1029,12 +1029,18 @@ int mxs_lcd_gpio_init(void)
 	return 0;
 }
 
+#define _WPU8000_
+
 int mxs_lcd_gpio_set(int set)
 {
 	if (!_lcd_gpio_init)
 		return 0;
 
+#ifdef _WPU8000_
+	gpio_direction_output(MXS_PIN_TO_GPIO(PINID_PWM3), set);
+#else
 	gpio_set_value(MXS_PIN_TO_GPIO(PINID_PWM3), set);
+#endif
 
 	return 0;
 }
