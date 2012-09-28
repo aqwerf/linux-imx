@@ -45,6 +45,7 @@
 #include "regs-dram.h"
 
 #include "sleep.h"
+#include "device.h"
 
 #define PENDING_IRQ_RETRY 100
 static void *saved_sram;
@@ -578,6 +579,8 @@ static struct mx23_pswitch_state pswitch_state = {
 	.dev_running = 0,
 };
 
+#define _WPU8000_
+
 static irqreturn_t pswitch_interrupt(int irq, void *dev)
 {
 	int pin_value, i;
@@ -586,6 +589,9 @@ static irqreturn_t pswitch_interrupt(int irq, void *dev)
 	if (!(__raw_readl(REGS_POWER_BASE + HW_POWER_CTRL) &
 		BM_POWER_CTRL_PSWITCH_IRQ))
 		return IRQ_HANDLED;
+#ifdef _WPU8000_
+	mxskbd_report_end_key_event(0);
+#endif
 	for (i = 0; i < 3000; i++) {
 		pin_value = __raw_readl(REGS_POWER_BASE + HW_POWER_STS) &
 			BF_POWER_STS_PSWITCH(0x1);
@@ -596,8 +602,14 @@ static irqreturn_t pswitch_interrupt(int irq, void *dev)
 	if (i < 3000) {
 		pr_info("pswitch goto suspend\n");
 		complete(&suspend_request);
+#ifdef _WPU8000_
+		mxskbd_report_end_key_event(1);
+#endif
 	} else {
 		pr_info("release pswitch to power down\n");
+#ifdef _WPU8000_
+		mxskbd_report_end_key_event(1);
+#endif
 		for (i = 0; i < 5000; i++) {
 			pin_value = __raw_readl(REGS_POWER_BASE + HW_POWER_STS)
 				& BF_POWER_STS_PSWITCH(0x1);

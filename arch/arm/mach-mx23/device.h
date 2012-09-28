@@ -31,4 +31,10 @@ extern void __init mx23_init_auart(void);
 extern void __init
 mx23_set_input_clk(unsigned long, unsigned long, unsigned long, unsigned long);
 
+#define _WPU8000_
+
+#if defined(_WPU8000_)
+extern void mxskbd_report_end_key_event(int is_rel);
+#endif
+
 #endif

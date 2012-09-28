@@ -60,6 +60,7 @@ struct mxskbd_data {
 	unsigned int btn_irq_ctrl; /* detect irq enable bits */
 };
 
+static struct mxskbd_data *_devdata;
 static int delay1 = 500;
 static int delay2 = 200;
 
@@ -120,6 +121,8 @@ static struct mxskbd_data *mxskbd_data_alloc(struct platform_device *pdev,
 		set_bit(keys->kcode, d->input->keybit);
 		keys++;
 	}
+
+	set_bit(KEY_END, d->input->keybit);
 
 	return d;
 }
@@ -259,6 +262,21 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+void
+mxskbd_report_end_key_event(int is_rel)
+{
+	if (!_devdata)
+		return;
+
+	if (is_rel) {
+		input_report_key(GET_INPUT_DEV(_devdata), KEY_END, 0);
+		_keypad_set_backlight(0);
+	} else {
+		input_report_key(GET_INPUT_DEV(_devdata), KEY_END, !0);
+		_keypad_set_backlight(1);
+	}
+}
+
 static int mxskbd_open(struct input_dev *dev)
 {
 	/* enable clock */
@@ -358,6 +376,8 @@ static int __devinit mxskbd_probe(struct platform_device *pdev)
 		err = -ENOMEM;
 		goto err_out;
 	}
+
+	_devdata = d;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
