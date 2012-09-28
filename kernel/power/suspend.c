@@ -261,6 +261,8 @@ static void suspend_finish(void)
  *	Then, do the setup for suspend, enter the state, and cleaup (after
  *	we've woken up).
  */
+#define _WPU8000_
+
 int enter_state(suspend_state_t state)
 {
 	int error;

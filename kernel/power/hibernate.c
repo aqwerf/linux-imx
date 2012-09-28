@@ -581,6 +581,7 @@ static int prepare_processes(void)
 /**
  *	hibernate - The granpappy of the built-in hibernation management
  */
+#define _WPU8000_
 
 int hibernate(void)
 {
