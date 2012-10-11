@@ -84,9 +84,6 @@ struct mxs_kbd_plat_data {
 	int channel1;
 	int channel2;
 	int channel3;
-	unsigned int btn_enable; /* detect enable bits */
-	unsigned int btn_irq_stat; /* detect irq status bits */
-	unsigned int btn_irq_ctrl; /* detect irq enable bits */
 };
 int mxs_keypad_gpio_init(void);
 int mxs_keypad_gpio_set(int set);
