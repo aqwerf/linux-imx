@@ -61,6 +61,7 @@ struct mxskbd_data {
 };
 
 static struct mxskbd_data *_devdata;
+static struct timer_list _bl_timer;
 static int delay1 = 500;
 static int delay2 = 200;
 
@@ -72,10 +73,23 @@ _keypad_set_backlight(int is_on)
 {
 	mxs_keypad_gpio_init();
 
-	if (is_on)
+	if (is_on) {
 		mxs_keypad_gpio_set(1);
-	else
+
+		del_timer(&_bl_timer);
+		_bl_timer.expires = jiffies + msecs_to_jiffies(5000);
+		add_timer(&_bl_timer);
+	} else {
 		mxs_keypad_gpio_set(0);
+
+		del_timer(&_bl_timer);
+	}
+}
+
+static void
+_keypad_bl_timer_handler(unsigned long data)
+{
+	_keypad_set_backlight(0);
 }
 
 static void
@@ -237,7 +251,6 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 		input_report_key(GET_INPUT_DEV(devdata),
 				 last_button, 0);
 		last_button = -1;
-		_keypad_set_backlight(0);
 	} else {
 		/* END key process */
 		if (devdata->btn_irq1 == irq && _devdata->end_button) {
@@ -258,8 +271,6 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 				input_report_key(
 						GET_INPUT_DEV(_devdata),
 						KEY_END, 0);
-				_keypad_set_backlight(0);
-
 				devdata->end_button_cnt = 0;
 				_devdata->end_button = 0;
 			}
@@ -334,6 +345,9 @@ static int mxskbd_suspend(struct platform_device *pdev, pm_message_t state)
 	__raw_writel(BM_LRADC_CTRL1_LRADC0_IRQ_EN << d->chan3,
 		     d->base + HW_LRADC_CTRL1_CLR);
 	mxskbd_close(d->input);
+
+	_keypad_set_backlight(0);
+
 	return 0;
 }
 
@@ -436,6 +450,9 @@ static int __devinit mxskbd_probe(struct platform_device *pdev)
 	hw_lradc_use_channel(d->chan3);
 	mxskbd_hwinit(pdev);
 
+	init_timer(&_bl_timer);
+	_bl_timer.function = _keypad_bl_timer_handler;
+
 	return 0;
 
 err_free_irq3:
@@ -471,6 +488,8 @@ static int __devexit mxskbd_remove(struct platform_device *pdev)
 	mxskbd_data_free(d);
 
 	platform_set_drvdata(pdev, NULL);
+
+	_keypad_set_backlight(0);
 
 	return 0;
 }
