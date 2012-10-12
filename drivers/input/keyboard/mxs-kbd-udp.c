@@ -57,7 +57,6 @@ struct mxskbd_data {
 	int chan3_last_button;
 
 	int end_button;
-	int end_button_cnt;
 };
 
 static struct mxskbd_data *_devdata;
@@ -138,7 +137,6 @@ static struct mxskbd_data *mxskbd_data_alloc(struct platform_device *pdev,
 	d->chan3_last_button = -1;
 
 	d->end_button = 0;
-	d->end_button_cnt = 0;
 
 	while (keys->raw >= 0) {
 		set_bit(keys->kcode, d->input->keybit);
@@ -180,22 +178,6 @@ static unsigned mxskbd_decode_button(struct mxskbd_keypair *codes,
 		codes++;
 	}
 	return (unsigned)-1; /* invalid key */
-}
-
-void mxskbd_set_end_key_event(int is_end_key)
-{
-	if (!_devdata)
-		return;
-
-	_devdata->end_button = is_end_key;
-}
-
-int mxskbd_get_end_key_event(void)
-{
-	if (!_devdata)
-		return -1;
-
-	return _devdata->end_button;
 }
 
 static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
@@ -253,26 +235,27 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 		last_button = -1;
 	} else {
 		/* END key process */
-		if (devdata->btn_irq1 == irq && _devdata->end_button) {
+		if (devdata->btn_irq1 == irq &&
+				 devdata->chan2_last_button < 0 &&
+				 devdata->chan3_last_button < 0) {
 			pin_value = __raw_readl(REGS_POWER_BASE +
 					HW_POWER_STS) &
-				BM_POWER_STS_PSWITCH;
-			if (pin_value == 0x100000) {
-				if (!devdata->end_button_cnt) {
+				BF_POWER_STS_PSWITCH(0x1);
+			if (pin_value) {
+				if (!devdata->end_button) {
 					input_report_key(
 							GET_INPUT_DEV(_devdata),
 							KEY_END, !0);
 					_keypad_set_backlight(1);
 				}
 
-				if (devdata->end_button_cnt++ > 400)
+				if (devdata->end_button++ > 400)
 					_keypad_set_pm_power_off();
-			} else {
+			} else if (devdata->end_button) {
 				input_report_key(
 						GET_INPUT_DEV(_devdata),
 						KEY_END, 0);
-				devdata->end_button_cnt = 0;
-				_devdata->end_button = 0;
+				devdata->end_button = 0;
 			}
 		}
 	}

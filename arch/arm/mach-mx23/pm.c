@@ -589,16 +589,7 @@ static irqreturn_t pswitch_interrupt(int irq, void *dev)
 	if (!(__raw_readl(REGS_POWER_BASE + HW_POWER_CTRL) &
 		BM_POWER_CTRL_PSWITCH_IRQ))
 		return IRQ_HANDLED;
-#ifdef _WPU8000_
-	mdelay(1);
-	pin_value = __raw_readl(REGS_POWER_BASE + HW_POWER_STS) &
-		BM_POWER_STS_PSWITCH;
-
-	if (pin_value == 0x300000)
-		mxskbd_set_end_key_event(0);
-	else
-		mxskbd_set_end_key_event(1);
-#else
+#ifndef _WPU8000_
 	for (i = 0; i < 3000; i++) {
 		pin_value = __raw_readl(REGS_POWER_BASE + HW_POWER_STS) &
 			BF_POWER_STS_PSWITCH(0x1);
