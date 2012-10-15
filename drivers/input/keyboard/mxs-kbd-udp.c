@@ -165,7 +165,6 @@ static void mxskbd_data_free(struct mxskbd_data *d)
 
 static unsigned mxskbd_decode_button(struct mxskbd_keypair *codes,
 			int raw_button)
-
 {
 	pr_debug("Decoding %d\n", raw_button);
 	while (codes->raw != -1) {
@@ -174,6 +173,21 @@ static unsigned mxskbd_decode_button(struct mxskbd_keypair *codes,
 			pr_debug("matches code 0x%x = %d\n",
 				codes->kcode, codes->kcode);
 			return codes->kcode;
+		}
+		codes++;
+	}
+	return (unsigned)-1; /* invalid key */
+}
+
+static unsigned mxskbd_incode_button(struct mxskbd_keypair *codes,
+			int kcode)
+{
+	pr_debug("Incoding %d\n", kcode);
+	while (codes->raw != -1) {
+		if (kcode == codes->kcode) {
+			pr_debug("matches code 0x%x = %d(%d)\n",
+				codes->kcode, codes->kcode, codes->raw);
+			return codes->raw;
 		}
 		codes++;
 	}
@@ -191,18 +205,27 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 	int pin_value = 0;
 
 	if (devdata->btn_irq1 == irq) {
+		if (devdata->chan2_last_button > 0 ||
+				devdata->chan3_last_button > 0)
+			goto _end;
 		raw_button = __raw_readl(devdata->base +
 				HW_LRADC_CHn(devdata->chan1)) &
 			BM_LRADC_CHn_VALUE;
 		last_button = devdata->chan1_last_button;
 		keycodes_offset = 0;
 	} else if (devdata->btn_irq2 == irq) {
+		if (devdata->chan1_last_button > 0 ||
+				devdata->chan3_last_button > 0)
+			goto _end;
 		raw_button = __raw_readl(devdata->base +
 				HW_LRADC_CHn(devdata->chan2)) &
 			BM_LRADC_CHn_VALUE;
 		last_button = devdata->chan2_last_button;
 		keycodes_offset = devdata->keycodes_offset;
 	} else if (devdata->btn_irq3 == irq) {
+		if (devdata->chan1_last_button > 0 ||
+				devdata->chan2_last_button > 0)
+			goto _end;
 		raw_button = __raw_readl(devdata->base +
 				HW_LRADC_CHn(devdata->chan3)) &
 			BM_LRADC_CHn_VALUE;
@@ -215,15 +238,20 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 
 	normalized_button = (raw_button * TARGET_VDDIO_LRADC_VALUE) / vddio;
 
-	if (last_button < 0 &&
-			raw_button < BUTTON_PRESS_THRESHOLD) {
+	if (raw_button < BUTTON_PRESS_THRESHOLD) {
 		btn = mxskbd_decode_button(devdata->keycodes + keycodes_offset,
 				raw_button);
 		if (btn < KEY_MAX) {
-			last_button = btn;
-			input_report_key(GET_INPUT_DEV(devdata),
-					 last_button, !0);
-			_keypad_set_backlight(1);
+			if (last_button < 0) {
+				last_button = btn;
+				input_report_key(GET_INPUT_DEV(devdata),
+						last_button, !0);
+				_keypad_set_backlight(1);
+			} else if (last_button != btn) {
+				input_report_key(GET_INPUT_DEV(devdata),
+						last_button, 0);
+				last_button = -1;
+			}
 		} else
 			dev_err(&pdev->dev, "Invalid button: raw = %d, "
 				"normalized = %d, vddio = %d\n",
@@ -259,7 +287,7 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 			}
 		}
 	}
-
+_end:
 	if (devdata->btn_irq1 == irq) {
 		__raw_writel(BM_LRADC_CTRL1_LRADC0_IRQ << devdata->chan1,
 				devdata->base + HW_LRADC_CTRL1_CLR);
