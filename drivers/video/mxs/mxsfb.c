@@ -685,6 +685,40 @@ static int get_max_memsize(struct mxs_platform_fb_entry *pentry,
 	return fbdata->mem_size;
 }
 
+#if defined(CONFIG_FB_MXS_LCD_ILI9225B)
+static int lcd_power = 1;
+
+/* sysfs export of baclight control */
+static int mxsfb_lcd_power_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "%d\n", lcd_power);
+}
+
+static int mxsfb_lcd_power_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t len)
+{
+	if (len < 1 || !cdata)
+		return -EINVAL;
+
+	if (strnicmp(buf, "on", 2) == 0 ||
+			strnicmp(buf, "1", 1) == 0) {
+		ili9225b_lcd_panel_power(1, cdata->phys_start);
+	} else if (strnicmp(buf, "off", 3) == 0 ||
+			strnicmp(buf, "0", 1) == 0) {
+		ili9225b_lcd_panel_power(0, cdata->phys_start);
+	} else {
+		return -EINVAL;
+	}
+
+	return len;
+}
+
+static DEVICE_ATTR(lcd_power, 0644,
+		   mxsfb_lcd_power_show,
+		   mxsfb_lcd_power_store);
+#endif
+
 static int __devinit mxsfb_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -852,6 +886,13 @@ static int __devinit mxsfb_probe(struct platform_device *pdev)
 	if (ret)
 		goto out_irq;
 
+#if defined(CONFIG_FB_MXS_LCD_ILI9225B)
+	ret = device_create_file(&(pdev->dev), &dev_attr_lcd_power);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "mxsfb: failed to add entries\n");
+		goto out_irq;
+	}
+#endif
 	pentry->run_panel();
 	/* REVISIT: temporary workaround for MX23EVK */
 	mxsfb_disable_controller(data);

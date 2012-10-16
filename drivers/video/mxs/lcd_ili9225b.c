@@ -39,6 +39,8 @@
 
 /*_____________________ Constants Definitions _______________________________*/
 
+#define REGS_PWM_BASE IO_ADDRESS(PWM_PHYS_ADDR)
+
 #define _LCD_BYD		0
 #define _LCD_TCL		1
 
@@ -58,9 +60,19 @@
 /*_____________________ Variables Definitions _______________________________*/
 
 static int _init_temp;
-static int _init_panel;
+atomic_t _init_panel;
 
+static struct mxs_platform_bl_data _bl_data;
 static struct clk *_lcd_clk;
+static struct clk *_pwm_clk;
+
+static int _bl_values[] = {
+	0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100
+};
+
+static int _bl_power[] = {
+	0, 1500, 3600, 6100, 10300, 15500, 74200, 114200, 155200, 190100, 191000
+};
 
 /*_____________________ Local Declarations __________________________________*/
 
@@ -140,17 +152,6 @@ _lcd_panel_set_display(int is_on)
 		_lcd_panel_pair_write(0x0007, 0x1017);
 	else
 		_lcd_panel_pair_write(0x0007, 0x0000);
-}
-
-static void
-_lcd_panel_set_backlight(int is_on)
-{
-	mxs_lcd_gpio_init();
-
-	if (is_on)
-		mxs_lcd_gpio_set(1);
-	else
-		mxs_lcd_gpio_set(0);
 }
 
 static void
@@ -264,8 +265,6 @@ _lcd_panel_init(int type)
 {
 	int ret = 0;
 
-	_init_panel = 1;
-
 	switch (type) {
 	case _LCD_BYD:
 		_lcd_panel_init_byd();
@@ -279,6 +278,45 @@ _lcd_panel_init(int type)
 	}
 
 	return ret;
+}
+
+static int
+_lcd_panel_power(int set, dma_addr_t phys)
+{
+	if (!_init_temp)
+		return 0;
+
+	if (atomic_read(&_init_panel) == set)
+		return 0;
+
+	if (set) {
+		_lcd_panel_pair_write(0x0010, 0x0A00);
+
+		/* for external LCD reset */
+		_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_RESET);
+		mdelay(10);
+		_lcdif_write(HW_LCDIF_CTRL1_SET, BM_LCDIF_CTRL1_RESET);
+		mdelay(50);
+
+		/* for external LCD */
+		_lcd_panel_init(_LCD_BYD);
+		_lcd_panel_set_prepare(0, 0);
+		mdelay(2);
+
+		atomic_set(&_init_panel, set);
+
+		ili9225b_lcdif_dma_send(phys);
+	} else {
+		atomic_set(&_init_panel, set);
+
+		_lcd_panel_pair_write(0x0007, 0x0000);
+		mdelay(50);
+		_lcd_panel_pair_write(0x0011, 0x0007);
+		mdelay(50);
+		_lcd_panel_pair_write(0x0010, 0x0A02);
+	}
+
+	return 0;
 }
 
 static void
@@ -368,13 +406,16 @@ _lcdif_init_panel(struct device *dev, dma_addr_t phys, int memsize,
 	}
 
 	if (_init_temp) {
+		/* for host lcdif */
+		_lcdif_setup_system_panel();
+
+		atomic_set(&_init_panel, 1);
+
+		/* for external LCD reset */
 		_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_RESET);
 		mdelay(10);
 		_lcdif_write(HW_LCDIF_CTRL1_SET, BM_LCDIF_CTRL1_RESET);
 		mdelay(50);
-
-		/* for host lcdif */
-		_lcdif_setup_system_panel();
 		
 		/* for external LCD */
 		_lcd_panel_init(_LCD_BYD);
@@ -385,6 +426,7 @@ _lcdif_init_panel(struct device *dev, dma_addr_t phys, int memsize,
 			goto out;
 	}
 
+	mxs_lcd_set_bl_pdata(pentry->bl_data);
 	mxs_lcdif_notify_clients(MXS_LCDIF_PANEL_INIT, pentry);
 
 	_init_temp = 1;
@@ -418,26 +460,17 @@ _lcdif_blank_panel(int blank)
 {
 	int ret = 0;
 
-#ifndef _ENABLE_BLANK
-	return 0;
-#endif
-
-	if (!_init_panel) return ret;
+	if (!atomic_read(&_init_panel))
+		return ret;
 
 	switch (blank) {
 	case FB_BLANK_NORMAL: /* lcd on, backlight on */
 	case FB_BLANK_UNBLANK:
-		_lcd_panel_set_display(1);
-		_lcd_panel_set_backlight(1);
 		break;
 	case FB_BLANK_VSYNC_SUSPEND: /* lcd on, backlight off */
 	case FB_BLANK_HSYNC_SUSPEND:
-		_lcd_panel_set_display(1);
-		_lcd_panel_set_backlight(0);
 		break;
 	case FB_BLANK_POWERDOWN: /* lcd and backlight off */
-		_lcd_panel_set_display(0);
-		_lcd_panel_set_backlight(0);
 		break;
 	default:
 		ret = -EINVAL;
@@ -448,8 +481,6 @@ _lcdif_blank_panel(int blank)
 static void
 _lcdif_run_panel(void)
 {
-	_lcd_panel_set_backlight(1);
-
 	_lcdif_write(HW_LCDIF_CTRL1_SET, BM_LCDIF_CTRL1_CUR_FRAME_DONE_IRQ_EN);
 
 	_lcdif_write(HW_LCDIF_CTRL_CLR, BM_LCDIF_CTRL_RUN);
@@ -467,8 +498,6 @@ _lcdif_run_panel(void)
 static void
 _lcdif_stop_panel(void)
 {
-	_lcd_panel_set_backlight(0);
-
 	_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_CUR_FRAME_DONE_IRQ_EN);
 
 	_lcdif_write(HW_LCDIF_CTRL_CLR, BM_LCDIF_CTRL_RUN);
@@ -479,11 +508,8 @@ _lcdif_stop_panel(void)
 static int
 _lcdif_pan_display(dma_addr_t addr)
 {
-#if 1
 	_lcdif_write(HW_LCDIF_CUR_BUF, addr);
-#else
-	_lcdif_write(HW_LCDIF_NEXT_BUF, phys);
-#endif
+
 	return 0;
 }
 
@@ -500,7 +526,129 @@ static struct mxs_platform_fb_entry fb_entry = {
 	.run_panel = _lcdif_run_panel,
 	.stop_panel = _lcdif_stop_panel,
 	.pan_display = _lcdif_pan_display,
-	.bl_data = NULL,
+	.bl_data = &_bl_data,
+};
+
+static int
+_bl_init(struct mxs_platform_bl_data *data)
+{
+	int ret = 0;
+
+	_pwm_clk = clk_get(NULL, "pwm");
+	if (IS_ERR(_pwm_clk)) {
+		ret = PTR_ERR(_pwm_clk);
+		return ret;
+	}
+	clk_enable(_pwm_clk);
+	mxs_reset_block(REGS_PWM_BASE, 1);
+
+	__raw_writel(BF_PWM_ACTIVEn_INACTIVE(0) |
+		     BF_PWM_ACTIVEn_ACTIVE(0),
+		     REGS_PWM_BASE + HW_PWM_ACTIVEn(3));
+	__raw_writel(BF_PWM_PERIODn_CDIV(6) | /* divide by 64 */
+		     BF_PWM_PERIODn_INACTIVE_STATE(2) |	/* low */
+		     BF_PWM_PERIODn_ACTIVE_STATE(3) | /* high */
+		     BF_PWM_PERIODn_PERIOD(599),
+		     REGS_PWM_BASE + HW_PWM_PERIODn(3));
+	__raw_writel(BM_PWM_CTRL_PWM3_ENABLE, REGS_PWM_BASE + HW_PWM_CTRL_SET);
+
+	return 0;
+}
+
+static void
+_bl_free(struct mxs_platform_bl_data *data)
+{
+	__raw_writel(BF_PWM_ACTIVEn_INACTIVE(0) |
+		     BF_PWM_ACTIVEn_ACTIVE(0),
+		     REGS_PWM_BASE + HW_PWM_ACTIVEn(3));
+	__raw_writel(BF_PWM_PERIODn_CDIV(6) | /* divide by 64 */
+		     BF_PWM_PERIODn_INACTIVE_STATE(2) | /* low */
+		     BF_PWM_PERIODn_ACTIVE_STATE(3) | /* high */
+		     BF_PWM_PERIODn_PERIOD(599),
+		     REGS_PWM_BASE + HW_PWM_PERIODn(3));
+	__raw_writel(BM_PWM_CTRL_PWM3_ENABLE, REGS_PWM_BASE + HW_PWM_CTRL_CLR);
+
+	clk_disable(_pwm_clk);
+	clk_put(_pwm_clk);
+}
+
+static int
+_bl_to_power(int br)
+{
+	int base;
+	int rem;
+
+	if (br > 100)
+		br = 100;
+	base = _bl_power[br / 10];
+	rem = br % 10;
+
+	if (!rem)
+		return base;
+	else
+		return base + (rem * (_bl_power[br / 10 + 1]) - base) / 10;
+}
+
+static int
+_bl_set_intensity(struct mxs_platform_bl_data *data,
+		struct backlight_device *bd, int suspended)
+{
+	int intensity = bd->props.brightness;
+	int scaled_int;
+
+	if (bd->props.power != FB_BLANK_UNBLANK)
+		intensity = 0;
+	if (bd->props.fb_blank != FB_BLANK_UNBLANK)
+		intensity = 0;
+	if (suspended)
+		intensity = 0;
+
+	/*
+	 * This is not too cool but what can we do?
+	 * Luminance changes non-linearly...
+	 */
+	if (regulator_set_current_limit
+			(data->regulator,
+			 _bl_to_power(intensity),
+			 _bl_to_power(intensity)))
+		return -EBUSY;
+
+	scaled_int = _bl_values[intensity / 10];
+
+	if (scaled_int < 100) {
+		int rem = intensity - 10 * (intensity / 10); /* r = i % 10; */
+
+		scaled_int += rem * (_bl_values[intensity / 10 + 1] -
+				_bl_values[intensity / 10]) / 10;
+	}
+
+	__raw_writel(BF_PWM_ACTIVEn_INACTIVE(scaled_int) |
+			BF_PWM_ACTIVEn_ACTIVE(0),
+			REGS_PWM_BASE + HW_PWM_ACTIVEn(3));
+	if (scaled_int >= 99) {
+		__raw_writel(BF_PWM_PERIODn_CDIV(6) | /* divide by 64 */
+				BF_PWM_PERIODn_INACTIVE_STATE(3) | /* high */
+				BF_PWM_PERIODn_ACTIVE_STATE(3) | /* high */
+				BF_PWM_PERIODn_PERIOD(399),
+				REGS_PWM_BASE + HW_PWM_PERIODn(3));
+	} else {
+		__raw_writel(BF_PWM_PERIODn_CDIV(6) | /* divide by 64 */
+				BF_PWM_PERIODn_INACTIVE_STATE(2) | /* low */
+				BF_PWM_PERIODn_ACTIVE_STATE(3) | /* high */
+				BF_PWM_PERIODn_PERIOD(399),
+				REGS_PWM_BASE + HW_PWM_PERIODn(3));
+	}
+
+	return 0;
+}
+
+static struct mxs_platform_bl_data _bl_data = {
+	.bl_max_intensity = 100,
+	.bl_default_intensity = 80,
+	.bl_cons_intensity = 80,
+	.init_bl = _bl_init,
+	.free_bl = _bl_free,
+	.set_bl_intensity = _bl_set_intensity,
 };
 
 static int
@@ -523,6 +671,9 @@ subsys_initcall(register_devices);
 int
 ili9225b_lcdif_dma_send(dma_addr_t addr)
 {
+	if (!atomic_read(&_init_panel) || addr <= 0)
+		return -1;
+
 	_lcdif_write(HW_LCDIF_CUR_BUF, (uint32_t)addr);
 
 	_lcdif_write(HW_LCDIF_CTRL_CLR, BM_LCDIF_CTRL_RUN);
@@ -550,3 +701,9 @@ ili9225b_lcdif_dma_send(dma_addr_t addr)
 }
 EXPORT_SYMBOL(ili9225b_lcdif_dma_send);
 
+int
+ili9225b_lcd_panel_power(int set, dma_addr_t phys)
+{
+	return _lcd_panel_power(set, phys);
+}
+EXPORT_SYMBOL(ili9225b_lcd_panel_power);
