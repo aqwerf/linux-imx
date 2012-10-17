@@ -674,8 +674,6 @@ static unsigned long mxs_mmc_setclock_mmc0(unsigned long hz)
 static struct mxs_mmc_platform_data mx23_mmc0_data = {
 	.hw_init	= mxs_mmc_hw_init_mmc0,
 	.hw_release	= mxs_mmc_hw_release_mmc0,
-	.ath6kl_init	= mxs_mmc_ath6kl_init,
-	.ath6kl_release = mxs_mmc_ath6kl_release,
 	.get_wp		= mxs_mmc_get_wp_mmc0,
 	.cmd_pullup	= mxs_mmc_cmd_pullup_mmc0,
 	 /*

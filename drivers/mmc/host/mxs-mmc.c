@@ -1324,15 +1324,6 @@ static int __init mxs_mmc_probe(struct platform_device *pdev)
 		}
 	}
 
-	/* Set up AR6003 pins */
-	if (mmc_data->ath6kl_init) {
-		err = mmc_data->ath6kl_init();
-		if (err) {
-			dev_err(dev, "AR6003 configuration failed\n");
-			goto out_res;
-		}
-	}
-
 	host->mmc = mmc;
 	host->dev = dev;
 
@@ -1425,8 +1416,6 @@ out_irq:
 out_dma:
 	clk_disable(host->clk);
 out_clk:
-	if (mmc_data->ath6kl_release)
-		mmc_data->ath6kl_release();
 	if (mmc_data->hw_release)
 		mmc_data->hw_release();
 out_res:
@@ -1466,9 +1455,6 @@ static int __exit mxs_mmc_remove(struct platform_device *pdev)
 		regulator_put(host->regulator);
 
 	mmc_free_host(mmc);
-
-	if (mmc_data->ath6kl_release)
-		mmc_data->ath6kl_release();
 
 	if (mmc_data->hw_release)
 		mmc_data->hw_release();
