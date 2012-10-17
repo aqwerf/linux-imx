@@ -45,7 +45,6 @@
 #include "regs-dram.h"
 
 #include "sleep.h"
-#include "device.h"
 
 #define PENDING_IRQ_RETRY 100
 static void *saved_sram;
@@ -579,8 +578,6 @@ static struct mx23_pswitch_state pswitch_state = {
 	.dev_running = 0,
 };
 
-#define _WPU8000_
-
 static irqreturn_t pswitch_interrupt(int irq, void *dev)
 {
 	int pin_value, i;
@@ -589,7 +586,9 @@ static irqreturn_t pswitch_interrupt(int irq, void *dev)
 	if (!(__raw_readl(REGS_POWER_BASE + HW_POWER_CTRL) &
 		BM_POWER_CTRL_PSWITCH_IRQ))
 		return IRQ_HANDLED;
-#ifndef _WPU8000_
+
+#if !defined(CONFIG_KEYBOARD_MXS_CANOPUS) && \
+	!defined(CONFIG_KEYBOARD_MXS_CANOPUS_MODULE)
 	for (i = 0; i < 3000; i++) {
 		pin_value = __raw_readl(REGS_POWER_BASE + HW_POWER_STS) &
 			BF_POWER_STS_PSWITCH(0x1);

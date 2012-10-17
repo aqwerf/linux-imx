@@ -74,10 +74,7 @@ struct mxskbd_keypair {
 	int kcode;
 };
 
-#ifndef _WPU8000_
-#define _WPU8000_
-#endif
-#if defined(_WPU8000_)
+#if defined(CONFIG_KEYBOARD_MXS_CANOPUS)
 struct mxs_kbd_plat_data {
 	struct mxskbd_keypair *keypair;
 	int keypair_offset;

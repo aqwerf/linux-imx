@@ -439,6 +439,14 @@ config KEYBOARD_MXS
 	help
 	  This is the Keypad driver for the Freescale mxs soc
 
+config KEYBOARD_MXS_CANOPUS
+	tristate "MXS Canopus keyboard"
+	depends on ARCH_MXS
+	help
+	  This is the Keypad driver for the MXS canopus board.
+	  Canopus board has keys likes mobile phone (24keys).
+	  Original KEYBOARD_MXS use only 1 ADC channel, but
+	  it use 3 ADC channels.
 
 config KEYBOARD_MC9S08DZ60
 	tristate "mc9s08dz60 keyboard"

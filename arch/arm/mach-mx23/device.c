@@ -373,11 +373,8 @@ static void __init mx23_init_lradc(void)
 }
 #endif
 
-#if defined(CONFIG_KEYBOARD_MXS) || defined(CONFIG_KEYBOARD_MXS_MODULE)
-#ifndef _WPU8000_
-#define _WPU8000_
-#endif
-#if defined(_WPU8000_)
+#if defined(CONFIG_KEYBOARD_MXS_CANOPUS) || \
+	defined(CONFIG_KEYBOARD_MXS_CANOPUS_MODULE)
 static struct mxskbd_keypair keyboard_data[] = {
 	{ 6, KEY_F1 },
 	{ 242, KEY_F2 },
@@ -436,7 +433,9 @@ static struct resource mx23_kbd_res[] = {
 	 .end   = IRQ_LRADC_CH4,
 	 },
 };
-#else
+#endif
+
+#if defined(CONFIG_KEYBOARD_MXS) || defined(CONFIG_KEYBOARD_MXS_MODULE)
 static struct mxskbd_keypair keyboard_data[] = {
 	{ 100, KEY_F1 },
 	{ 306, KEY_RIGHT},
@@ -467,6 +466,11 @@ static struct resource mx23_kbd_res[] = {
 	 },
 };
 #endif
+
+#if defined(CONFIG_KEYBOARD_MXS_CANOPUS) || \
+	defined(CONFIG_KEYBOARD_MXS_CANOPUS_MODULE) || \
+	defined(CONFIG_KEYBOARD_MXS) || \
+	defined(CONFIG_KEYBOARD_MXS_MODULE)
 static void __init mx23_init_kbd(void)
 {
 	struct platform_device *pdev;

@@ -288,7 +288,9 @@ static struct platform_device mxs_lradc = {
 };
 #endif
 
-#if defined(CONFIG_KEYBOARD_MXS) || defined(CONFIG_KEYBOARD_MXS_MODULE)
+#if defined(CONFIG_KEYBOARD_MXS) || defined(CONFIG_KEYBOARD_MXS_MODULE) || \
+	defined(CONFIG_KEYBOARD_MXS_CANOPUS) || \
+	defined(CONFIG_KEYBOARD_MXS_CANOPUS_MODULE)
 static struct platform_device mxs_kbd = {
 	.name = "mxs-kbd",
 	.id = 0,
@@ -659,7 +661,9 @@ static struct mxs_dev_lookup dev_lookup[] = {
 	 },
 #endif
 
-#if defined(CONFIG_KEYBOARD_MXS) || defined(CONFIG_KEYBOARD_MXS_MODULE)
+#if defined(CONFIG_KEYBOARD_MXS) || defined(CONFIG_KEYBOARD_MXS_MODULE) || \
+	defined(CONFIG_KEYBOARD_MXS_CANOPUS) || \
+	defined(CONFIG_KEYBOARD_MXS_CANOPUS_MODULE)
 	{
 	 .name = "mxs-kbd",
 	 .size = 1,
