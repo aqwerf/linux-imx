@@ -70,16 +70,14 @@ static void mxskbd_close(struct input_dev *dev);
 static void
 _keypad_set_backlight(int is_on)
 {
-	mxs_keypad_gpio_init();
-
 	if (is_on) {
-		mxs_keypad_gpio_set(1);
+		mxs_key_backlight_gpio_set(1);
 
 		del_timer(&_bl_timer);
 		_bl_timer.expires = jiffies + msecs_to_jiffies(5000);
 		add_timer(&_bl_timer);
 	} else {
-		mxs_keypad_gpio_set(0);
+		mxs_key_backlight_gpio_set(0);
 
 		del_timer(&_bl_timer);
 	}

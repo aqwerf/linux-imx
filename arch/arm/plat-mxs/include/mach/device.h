@@ -82,8 +82,7 @@ struct mxs_kbd_plat_data {
 	int channel2;
 	int channel3;
 };
-int mxs_keypad_gpio_init(void);
-int mxs_keypad_gpio_set(int set);
+int mxs_key_backlight_gpio_set(int set);
 #else
 struct mxs_kbd_plat_data {
 	struct mxskbd_keypair *keypair;

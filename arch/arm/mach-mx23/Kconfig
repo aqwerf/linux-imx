@@ -6,6 +6,11 @@ config MACH_MX23EVK
 	depends on ARCH_MX23
 	select USB_ARCH_HAS_EHCI
 
+config MACH_MX23_CANOPUS
+	bool "Freescale MX23 Canopus board"
+	depends on ARCH_MX23
+	select USB_ARCH_HAS_EHCI
+
 endchoice
 
 

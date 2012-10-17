@@ -232,48 +232,6 @@ static struct pin_desc mx23evk_fixed_pins[] = {
 	 .drive	= 1,
 	 },
 	{
-	 .name = "LCD_RESET",
-	 .id = PINID_LCD_RESET,
-	 .fun = PIN_FUN1,
-	 .strength = PAD_8MA,
-	 .voltage = PAD_3_3V,
-	 .drive	= 1,
-	 },
-#if defined(CONFIG_FB_MXS_LCD_ILI9225B)
-	{
-	 .name = "LCD_RS",
-	 .id = PINID_LCD_RS,
-	 .fun = PIN_FUN1,
-	 .strength = PAD_8MA,
-	 .voltage = PAD_3_3V,
-	 .drive	= 1,
-	 },
-	{
-	 .name = "LCD_CS",
-	 .id = PINID_LCD_CS,
-	 .fun = PIN_FUN1,
-	 .strength = PAD_8MA,
-	 .voltage = PAD_3_3V,
-	 .drive	= 1,
-	 },
-	{
-	 .name = "LCD_WR",
-	 .id = PINID_LCD_WR,
-	 .fun = PIN_FUN1,
-	 .strength = PAD_8MA,
-	 .voltage = PAD_3_3V,
-	 .drive	= 1,
-	 },
-	{
-	 .name = "LCD_BACKLIGHT",
-	 .id = PINID_PWM3,
-	 .fun = PIN_FUN1,
-	 .strength = PAD_8MA,
-	 .voltage = PAD_3_3V,
-	 .drive	= 1,
-	 },
-#else
-	{
 	 .name  = "LCD_D16",
 	 .id	= PINID_LCD_D16,
 	 .fun	= PIN_FUN1,
@@ -289,7 +247,6 @@ static struct pin_desc mx23evk_fixed_pins[] = {
 	 .voltage	= PAD_3_3V,
 	 .drive	= 1,
 	 },
-#if 0
 	{
 	 .name  = "LCD_D18",
 	 .id	= PINID_GPMI_D08,
@@ -298,7 +255,6 @@ static struct pin_desc mx23evk_fixed_pins[] = {
 	 .voltage	= PAD_3_3V,
 	 .drive	= 1,
 	 },
-#endif
 	{
 	 .name  = "LCD_D19",
 	 .id	= PINID_GPMI_D09,
@@ -315,7 +271,6 @@ static struct pin_desc mx23evk_fixed_pins[] = {
 	 .voltage	= PAD_3_3V,
 	 .drive	= 1,
 	 },
-#if 0
 	{
 	 .name  = "LCD_D21",
 	 .id	= PINID_GPMI_D11,
@@ -324,7 +279,6 @@ static struct pin_desc mx23evk_fixed_pins[] = {
 	 .voltage	= PAD_3_3V,
 	 .drive	= 1,
 	 },
-#endif
 	{
 	 .name  = "LCD_D22",
 	 .id	= PINID_GPMI_D12,
@@ -339,6 +293,14 @@ static struct pin_desc mx23evk_fixed_pins[] = {
 	 .fun	= PIN_FUN2,
 	 .strength = PAD_8MA,
 	 .voltage	= PAD_3_3V,
+	 .drive	= 1,
+	 },
+	{
+	 .name = "LCD_RESET",
+	 .id = PINID_LCD_RESET,
+	 .fun = PIN_FUN1,
+	 .strength = PAD_8MA,
+	 .voltage = PAD_3_3V,
 	 .drive	= 1,
 	 },
 	{
@@ -381,7 +343,6 @@ static struct pin_desc mx23evk_fixed_pins[] = {
 	 .voltage = PAD_3_3V,
 	 .drive	= 1,
 	 },
-#endif
 #endif
 
 #if defined(CONFIG_FEC) || defined(CONFIG_FEC_MODULE)
@@ -856,8 +817,6 @@ int mxs_mmc_hw_init_mmc0(void)
 
 	mxs_request_pins(mx23evk_mmc_pins, ARRAY_SIZE(mx23evk_mmc_pins));
 
-#ifdef _WPU8000_
-#if 0
 	/* Configure write protect GPIO pin */
 	ret = gpio_request(MMC0_WP, "mmc0_wp");
 	if (ret) {
@@ -875,8 +834,6 @@ int mxs_mmc_hw_init_mmc0(void)
 	}
 	gpio_direction_output(MMC0_POWER, 0);
 	mdelay(100);
-#endif
-#endif
 
 	return 0;
 
@@ -893,39 +850,6 @@ void mxs_mmc_hw_release_mmc0(void)
 	gpio_free(MMC0_WP);
 
 	mxs_release_pins(mx23evk_mmc_pins, ARRAY_SIZE(mx23evk_mmc_pins));
-}
-
-#define PM_ENABLE MXS_PIN_TO_GPIO(PINID_GPMI_D11)
-#define CHIP_PWD_L MXS_PIN_TO_GPIO(PINID_GPMI_D08)
-
-int mxs_mmc_ath6kl_init(void)
-{
-	int ret = 0;
-
-	ret = gpio_request(PM_ENABLE, "pm_enable");
-	if (ret) {
-		pr_err("pm_enable\n");
-		goto out_pm_enable;
-	}
-	gpio_direction_output(PM_ENABLE, 1);
-
-	mdelay(100);
-
-	ret = gpio_request(CHIP_PWD_L, "chip_pwd_l");
-	if (ret) {
-		pr_err("chip_pwd_l\n");
-		goto out_pm_enable;
-	}
-	gpio_direction_output(CHIP_PWD_L, 1);
-
-out_pm_enable:
-	return ret;
-}
-
-void mxs_mmc_ath6kl_release(void)
-{
-	gpio_free(CHIP_PWD_L);
-	gpio_free(PM_ENABLE);
 }
 
 void mxs_mmc_cmd_pullup_mmc0(int enable)
@@ -1013,41 +937,3 @@ void __init mx23evk_pins_init(void)
 {
 	mxs_request_pins(mx23evk_fixed_pins, ARRAY_SIZE(mx23evk_fixed_pins));
 }
-
-#ifndef _WPU8000_
-#define _WPU8000_
-#endif
-#if defined(_WPU8000_)
-static int _keypad_gpio_init;
-
-int mxs_keypad_gpio_init(void)
-{
-	int ret;
-
-	if (_keypad_gpio_init)
-		return 0;
-
-	ret = gpio_request(MXS_PIN_TO_GPIO(PINID_GPMI_CE2N), "KEY_BL_ON");
-	if (ret) {
-		pr_warning("mxs_keypad_gpio_init: can not open GPIO %d\n",
-			   PINID_GPMI_CE2N);
-		return -1;
-	} else {
-		_keypad_gpio_init = 1;
-		gpio_direction_output(MXS_PIN_TO_GPIO(PINID_GPMI_CE2N), 0);
-	}
-
-	return 0;
-}
-
-int mxs_keypad_gpio_set(int set)
-{
-	if (!_keypad_gpio_init)
-		return 0;
-
-	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_CE2N), set);
-
-	return 0;
-}
-#endif
-
