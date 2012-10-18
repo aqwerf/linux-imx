@@ -33,6 +33,7 @@
 #include <linux/proc_fs.h>
 #include <linux/interrupt.h>
 #include <asm/fiq.h>
+#include <linux/uaccess.h>
 
 enum application_5v_status{
 	_5v_connected_verified,
@@ -772,6 +773,65 @@ static irqreturn_t mxs_irq_vdd5v(int irq, void *cookie)
 	return IRQ_HANDLED;
 }
 
+#ifdef CONFIG_MACH_MX23_CANOPUS
+#define MXS_DEV_NAME			"mxs_bat"
+
+#define MXS_BATTERY_VOLTAGE		_IOR('P', 0xa4, int)
+#define MXS_AC_ONLINE			_IOR('P', 0xa5, int)
+#define MXS_USB_ONLINE			_IOR('P', 0xa6, int)
+
+static int mxs_bat_open(struct inode *inode, struct file *file)
+{
+	return 0;
+}
+
+static int mxs_bat_release(struct inode *inode, struct file *file)
+{
+	return 0;
+}
+
+static int mxs_bat_ioctl(struct inode *inode, struct file *file,
+		unsigned int cmd, unsigned long arg)
+{
+	int ret = 0;
+	int val = 0;
+
+	if (_IOC_TYPE(cmd) != 'P')
+		return -ENOTTY;
+
+	switch (cmd) {
+	case MXS_BATTERY_VOLTAGE:
+		val = ddi_power_GetBattery() * 1000;
+		if (copy_to_user((int *) arg, &val, sizeof(int)))
+			return -EFAULT;
+		break;
+	case MXS_AC_ONLINE:
+		val = is_ac_online();
+		if (copy_to_user((int *) arg, &val, sizeof(int)))
+			return -EFAULT;
+		break;
+	case MXS_USB_ONLINE:
+		val = is_usb_online();
+		if (copy_to_user((int *) arg, &val, sizeof(int)))
+			return -EFAULT;
+		break;
+	default:
+		printk(KERN_DEBUG "mxs bat : unsupported ioctl command 0x%x\n",
+				cmd);
+		break;
+	}
+
+	return ret;
+}
+
+static const struct file_operations mxs_bat_fos = {
+	.owner		= THIS_MODULE,
+	.ioctl		= mxs_bat_ioctl,
+	.open		= mxs_bat_open,
+	.release	= mxs_bat_release,
+};
+#endif
+
 static int mxs_bat_probe(struct platform_device *pdev)
 {
 	struct mxs_info *info;
@@ -885,6 +945,34 @@ static int mxs_bat_probe(struct platform_device *pdev)
 	info->usb.num_properties = ARRAY_SIZE(mxs_power_props);
 	info->usb.get_property   = mxs_power_get_property;
 
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	int mxs_bat_major;
+	struct class *mxs_dev_class;
+	struct class_device *mxs_device;
+
+	mxs_bat_major = register_chrdev(0, MXS_DEV_NAME, &mxs_bat_fos);
+	if (mxs_bat_major < 0) {
+		printk(KERN_DEBUG "unable to get a major for mxs_bat\n");
+		ret = mxs_bat_major;
+		goto free_info;
+	}
+
+	mxs_dev_class = class_create(THIS_MODULE, MXS_DEV_NAME);
+	if (IS_ERR(mxs_dev_class)) {
+		printk(KERN_DEBUG "error creating mxs_bat dev class\n");
+		ret = -1;
+		goto class_failed;
+	}
+
+	mxs_device = device_create(mxs_dev_class, NULL,
+			MKDEV(mxs_bat_major, 0), NULL, MXS_DEV_NAME);
+	if (IS_ERR(mxs_device)) {
+		printk(KERN_DEBUG "error creating mxs_bat class device\n");
+		ret = -1;
+		goto dev_failed;
+	}
+#endif
+
 	init_timer(&info->sm_timer);
 	info->sm_timer.data = (unsigned long)info;
 	info->sm_timer.function = state_machine_timer;
@@ -899,7 +987,11 @@ static int mxs_bat_probe(struct platform_device *pdev)
 
 	ret = bc_sm_restart(info);
 	if (ret)
+#ifdef CONFIG_MACH_MX23_CANOPUS
+		goto dev_failed;
+#else
 		goto free_info;
+#endif
 
 
 	ret = request_irq(info->irq_vdd5v->start,
@@ -1010,6 +1102,12 @@ free_irq:
 
 stop_sm:
 	ddi_bc_ShutDown();
+#ifdef CONFIG_MACH_MX23_CANOPUS
+dev_failed:
+	class_destroy(mxs_dev_class);
+class_failed:
+	unregister_chrdev(mxs_bat_major, MXS_DEV_NAME);
+#endif
 free_info:
 	kfree(info);
 	return ret;
