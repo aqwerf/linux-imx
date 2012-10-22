@@ -355,10 +355,10 @@ _lcdif_setup_system_panel(void)
 			BF_LCDIF_CTRL1_BYTE_PACKING_FORMAT(0x3));
 
 	_lcdif_write(HW_LCDIF_TIMING,
-			BF_LCDIF_TIMING_CMD_HOLD(0x2) |
-			BF_LCDIF_TIMING_CMD_SETUP(0x2) |
-			BF_LCDIF_TIMING_DATA_HOLD(0x2) |
-			BF_LCDIF_TIMING_DATA_SETUP(0x2));
+			BF_LCDIF_TIMING_CMD_HOLD(0x1) |
+			BF_LCDIF_TIMING_CMD_SETUP(0x1) |
+			BF_LCDIF_TIMING_DATA_HOLD(0x3) |
+			BF_LCDIF_TIMING_DATA_SETUP(0x3));
 }
 
 static int
@@ -518,7 +518,7 @@ static struct mxs_platform_fb_entry fb_entry = {
 	.x_res = _V_ACTIVE,
 	.y_res = _H_ACTIVE,
 	.bpp = 16,
-	.cycle_time_ns = 150,
+	.cycle_time_ns = 10,
 	.lcd_type = MXS_LCD_PANEL_SYSTEM,
 	.init_panel = _lcdif_init_panel,
 	.release_panel = _lcdif_release_panel,
