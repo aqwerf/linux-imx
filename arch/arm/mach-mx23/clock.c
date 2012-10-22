@@ -415,10 +415,11 @@ static unsigned long lcdif_get_rate(struct clk *clk)
 
 	div = (__raw_readl(clk->scale_reg) >> clk->scale_bits) & mask;
 	if (div) {
-		rate /= div;
+		rate /= div * 1000;
 		div = (__raw_readl(CLKCTRL_BASE_ADDR + HW_CLKCTRL_FRAC) &
 			BM_CLKCTRL_FRAC_PIXFRAC) >> BP_CLKCTRL_FRAC_PIXFRAC;
-		rate /= div;
+		rate = rate * 18 / div;
+		rate *= 1000;
 	}
 
 	return rate;
