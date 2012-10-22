@@ -179,6 +179,43 @@ static void mx23_raw_disable(struct clk *clk)
 	}
 }
 
+static int mx23_rawb_enable(struct clk *clk)
+{
+	int i;
+	unsigned int reg;
+
+	if (clk->enable_reg) {
+		reg = __raw_readl(clk->enable_reg);
+		reg &= ~clk->enable_bits;
+		for (i = 0; i < 4; i++) {
+			if (clk->enable_bits & (0xff << (i * 8)))
+				break;
+		}
+		if (i < 4)
+			__raw_writeb(reg >> (i * 8), clk->enable_reg + i);
+	}
+	if (clk->busy_reg)
+		clk_busy_wait(clk);
+
+	return 0;
+}
+
+static void mx23_rawb_disable(struct clk *clk)
+{
+	int i;
+	unsigned int reg;
+	if (clk->enable_reg) {
+		reg = __raw_readl(clk->enable_reg);
+		reg |= clk->enable_bits;
+		for (i = 0; i < 4; i++) {
+			if (clk->enable_bits & (0xff << (i * 8)))
+				break;
+		}
+		if (i < 4)
+			__raw_writeb(reg >> (i * 8), clk->enable_reg + i);
+	}
+}
+
 static unsigned long ref_xtal_get_rate(struct clk *clk)
 {
 	return 24000000;
@@ -263,7 +300,8 @@ static int ref_clk_set_rate(struct clk *clk, unsigned long rate)
 	base = __raw_readl(clk->scale_reg);
 	base &= ~(0x3F << clk->scale_bits);
 	base |= (div << clk->scale_bits);
-	__raw_writel(base, clk->scale_reg);
+	__raw_writeb(base >> clk->scale_bits, clk->scale_reg +
+		     (clk->scale_bits / 8));
 	return 0;
 }
 
@@ -277,8 +315,8 @@ static unsigned long ref_cpu_get_rate(struct clk *clk)
 
 static struct clk ref_cpu_clk = {
 	.parent = &pll_clk,
-	.enable = mx23_raw_enable,
-	.disable = mx23_raw_disable,
+	.enable = mx23_rawb_enable,
+	.disable = mx23_rawb_disable,
 	.get_rate = ref_cpu_get_rate,
 	.round_rate = ref_clk_round_rate,
 	.set_rate = ref_clk_set_rate,
@@ -301,8 +339,8 @@ static unsigned long ref_emi_get_rate(struct clk *clk)
 
 static struct clk ref_emi_clk = {
 	.parent = &pll_clk,
-	.enable = mx23_raw_enable,
-	.disable = mx23_raw_disable,
+	.enable = mx23_rawb_enable,
+	.disable = mx23_rawb_disable,
 	.get_rate = ref_emi_get_rate,
 	.set_rate = ref_clk_set_rate,
 	.round_rate = ref_clk_round_rate,
@@ -315,8 +353,8 @@ static struct clk ref_emi_clk = {
 static unsigned long ref_io_get_rate(struct clk *clk);
 static struct clk ref_io_clk = {
 	.parent = &pll_clk,
-	.enable = mx23_raw_enable,
-	.disable = mx23_raw_disable,
+	.enable = mx23_rawb_enable,
+	.disable = mx23_rawb_disable,
 	.get_rate = ref_io_get_rate,
 	.enable_reg = CLKCTRL_BASE_ADDR + HW_CLKCTRL_FRAC,
 	.enable_bits = BM_CLKCTRL_FRAC_CLKGATEIO,
@@ -343,8 +381,8 @@ static unsigned long ref_pix_get_rate(struct clk *clk)
 
 static struct clk ref_pix_clk = {
 	.parent = &pll_clk,
-	.enable = mx23_raw_enable,
-	.disable = mx23_raw_disable,
+	.enable = mx23_rawb_enable,
+	.disable = mx23_rawb_disable,
 	.get_rate = ref_pix_get_rate,
 	.enable_reg = CLKCTRL_BASE_ADDR + HW_CLKCTRL_FRAC,
 	.enable_bits = BM_CLKCTRL_FRAC_CLKGATEPIX,
@@ -456,7 +494,9 @@ static int lcdif_set_rate(struct clk *clk, unsigned long rate)
 	reg_val = __raw_readl(CLKCTRL_BASE_ADDR + HW_CLKCTRL_FRAC);
 	reg_val &= ~BM_CLKCTRL_FRAC_PIXFRAC;
 	reg_val |= BF_CLKCTRL_FRAC_PIXFRAC(lowest_fracdiv);
-	__raw_writel(reg_val, CLKCTRL_BASE_ADDR + HW_CLKCTRL_FRAC);
+	reg_val >>= BP_CLKCTRL_FRAC_PIXFRAC;
+	__raw_writeb(reg_val, CLKCTRL_BASE_ADDR + HW_CLKCTRL_FRAC +
+		     (BP_CLKCTRL_FRAC_PIXFRAC / 8));
 
 	/* Ungate PFD */
 	__raw_writel(BM_CLKCTRL_FRAC_CLKGATEPIX,
@@ -686,7 +726,9 @@ static int cpu_set_rate(struct clk *clk, unsigned long rate)
 			return ret;
 		}
 
-		__raw_writel(val, CLKCTRL_BASE_ADDR + HW_CLKCTRL_FRAC);
+		__raw_writeb(val >> BP_CLKCTRL_FRAC_CPUFRAC,
+			     CLKCTRL_BASE_ADDR + HW_CLKCTRL_FRAC +
+			     (BP_CLKCTRL_FRAC_CPUFRAC / 8));
 
 		/* clear the gate */
 		__raw_writel(BM_CLKCTRL_FRAC_CLKGATECPU, CLKCTRL_BASE_ADDR +
