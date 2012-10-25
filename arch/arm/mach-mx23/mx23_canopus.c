@@ -77,7 +77,7 @@ static void __init mx23_canopus_init_machine(void)
 	mx23_canopus_device_init();
 }
 
-MACHINE_START(MX23, "MX23 Canopus Board")
+MACHINE_START(MX23, "Freescale MX23 Canopus Board")
 	.phys_io	= 0x80000000,
 	.io_pg_offst	= ((0xf0000000) >> 18) & 0xfffc,
 	.boot_params	= 0x40000100,
