@@ -7,8 +7,13 @@
  * resizing).
  */
 #define MIN_NR_CONSOLES 1       /* must be at least 1 */
+#ifdef CONFIG_MACH_MX23_CANOPUS
+#define MAX_NR_CONSOLES	1	/* serial lines start at 64 */
+#define MAX_NR_USER_CONSOLES 1	/* must be root to allocate above this */
+#else
 #define MAX_NR_CONSOLES	63	/* serial lines start at 64 */
 #define MAX_NR_USER_CONSOLES 63	/* must be root to allocate above this */
+#endif
 		/* Note: the ioctl VT_GETSTATE does not work for
 		   consoles 16 and higher (since it returns a short) */
 
