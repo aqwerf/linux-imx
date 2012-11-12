@@ -547,8 +547,10 @@ void mx23_pm_idle(void)
 		return;
 	}
 
-	__raw_writel(1<<12, REGS_CLKCTRL_BASE + HW_CLKCTRL_CPU_SET);
-	__asm__ __volatile__ ("mcr	p15, 0, r0, c7, c0, 4");
+	__raw_writel(BM_CLKCTRL_CPU_INTERRUPT_WAIT,
+		     REGS_CLKCTRL_BASE + HW_CLKCTRL_CPU_SET);
+	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c0, 4\n"
+			      : : "r" (0));
 
 	local_fiq_enable();
 	local_irq_enable();
