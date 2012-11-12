@@ -379,7 +379,7 @@ static int __init mxs_cpu_init(struct cpufreq_policy *policy)
 	}
 
 	x_clk = clk_get(NULL, "x");
-	if (IS_ERR(ahb_clk)) {
+	if (IS_ERR(x_clk)) {
 		ret = PTR_ERR(x_clk);
 		goto out_x;
 	}
