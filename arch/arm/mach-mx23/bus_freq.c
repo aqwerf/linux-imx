@@ -50,44 +50,54 @@
 
 struct profile profiles[] = {
 	{ 454736, 151580, 130910, 0, 1550000,
-	1450000, 355000, 3300000, 1750000, 24000, 0 },
+	1450000, 355000, 3300000, 1750000, 24000, 0x1CF5 },
 	{ 392727, 130910, 130910, 0, 1475000,
-	1375000, 225000, 3300000, 1750000, 24000, 0x1CF3 },
+	1375000, 225000, 3300000, 1750000, 24000, 0x1CF5 },
 	{ 360000, 120000, 130910, 0, 1375000,
-	1275000, 200000, 3300000, 1750000, 24000, 0x1CF3 },
+	1275000, 200000, 3300000, 1750000, 24000, 0x1CF5 },
 	{ 261818, 130910, 130910, 0, 1275000,
-	1175000, 173000, 3300000, 1750000, 24000, 0x1CF3 },
+	1175000, 173000, 3300000, 1750000, 24000, 0x1CF5 },
 #ifdef CONFIG_MXS_RAM_MDDR
 	{  64000,  64000,  48000, 3, 1050000,
-	975000, 150000, 3300000, 1750000, 24000, 0x1CF3 },
+	975000, 150000, 3300000, 1750000, 24000, 0x1CF5 },
 	{  24000,  24000,  24000, 3, 1050000,
-	975000, 150000, 3075000, 1725000, 6000, 0x1C93 },
+	975000, 150000, 3075000, 1725000, 6000, 0x1C95 },
 #else
 	{  64000,  64000,  96000, 3, 1050000,
-	975000, 150000, 3300000, 1750000, 24000, 0x1CF3 },
+	975000, 150000, 3300000, 1750000, 24000, 0x1CF5 },
 	{  24000,  24000,  96000, 3, 1050000,
-	975000, 150000, 3300000, 1725000, 6000, 0x1C93 },
+	975000, 150000, 3300000, 1725000, 6000, 0x1C95 },
 #endif
 };
 
+#ifndef CONFIG_MACH_MX23_CANOPUS
 static struct clk *usb_clk;
 static struct clk *lcdif_clk;
+#endif
 
 int low_freq_used(void)
 {
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	return 1;
+#else
 	if ((clk_get_usecount(usb_clk) == 0)
 	    && (clk_get_usecount(lcdif_clk) == 0))
 		return 1;
 	else
 		return 0;
+#endif
 }
 
 int is_hclk_autoslow_ok(void)
 {
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	return 1;
+#else
 	if (clk_get_usecount(usb_clk) == 0)
 		return 1;
 	else
 		return 0;
+#endif
 }
 
 int timing_ctrl_rams(int ss)
@@ -113,6 +123,7 @@ static int __devinit busfreq_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 
+#ifndef CONFIG_MACH_MX23_CANOPUS
 	usb_clk = clk_get(NULL, "usb_clk0");
 	if (IS_ERR(usb_clk)) {
 		ret = PTR_ERR(usb_clk);
@@ -129,6 +140,7 @@ static int __devinit busfreq_probe(struct platform_device *pdev)
 out_lcd:
 	clk_put(usb_clk);
 out_usb:
+#endif
 	return ret;
 }
 
