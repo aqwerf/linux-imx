@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.3
-# Tue Nov  6 20:52:53 2012
+# Thu Nov 15 14:43:03 2012
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -350,8 +350,7 @@ CONFIG_ALIGNMENT_TRAP=y
 #
 CONFIG_ZBOOT_ROM_TEXT=0x0
 CONFIG_ZBOOT_ROM_BSS=0x0
-CONFIG_CMDLINE="noinitrd console=ttySP1,115200 root=/dev/nfs rw nfsroot=192.168.9.10:/canopus-nfs,nfsvers=2,mountprog=21111,nfsprog=11111,udp ip=192.168.9.20:192.168.9.10 kgdboc=ttySP1,115200"
-CONFIG_CMDLINE_FORCE=y
+CONFIG_CMDLINE=""
 # CONFIG_XIP_KERNEL is not set
 CONFIG_KEXEC=y
 CONFIG_ATAGS_PROC=y
