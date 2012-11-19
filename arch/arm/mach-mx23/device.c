@@ -823,7 +823,11 @@ static ddi_bc_Cfg_t battery_data = {
 	.u16ChargingVoltage		 = 4200,	/* mV */
 	/* FIXME: the current comparator could have h/w bugs in current
 	 * detection through POWER_STS.CHRGSTS bit */
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	.u16ChargingCurrent		 = 750,		/* mA 750 */
+#else
 	.u16ChargingCurrent		 = 600,		/* mA 600 */
+#endif
 	.u16ChargingThresholdCurrent	 = 60,		/* mA 60 */
 	.u32ChargingTimeout		 = 4*60*60*1000,/* ms (4 hours) */
 	.u32TopOffPeriod		 = 30*60*1000,	/* ms (30 minutes) */
@@ -831,7 +835,11 @@ static ddi_bc_Cfg_t battery_data = {
 	.u8DieTempHigh			 = 75,		/* deg centigrade */
 	.u8DieTempLow			 = 65,		/* deg centigrade */
 	.u16DieTempSafeCurrent		 = 0,		/* mA */
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	.monitorBatteryTemp		 = 1,		/* Monitor the battery*/
+#else
 	.monitorBatteryTemp		 = 0,		/* Monitor the battery*/
+#endif
 	.u8BatteryTempChannel		 = 1,		/* LRADC 1 */
 	.u16BatteryTempHigh		 = 642,		/* Unknown units */
 	.u16BatteryTempLow		 = 497,		/* Unknown units */

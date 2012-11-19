@@ -528,6 +528,26 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.drive		= 1,
 		.output		= 1,
 		.data		= 0,
+	},
+	/* charger led green */
+	{
+		.name		= "CHARGER_LED_GREEN",
+		.id		= PINID_GPMI_D10,
+		.fun		= PIN_GPIO,
+		.voltage	= PAD_3_3V,
+		.drive		= 1,
+		.output		= 1,
+		.data		= 1,
+	},
+	/* charger led red */
+	{
+		.name		= "CHARGER_LED_RED",
+		.id		= PINID_GPMI_RDY1,
+		.fun		= PIN_GPIO,
+		.voltage	= PAD_3_3V,
+		.drive		= 1,
+		.output		= 1,
+		.data		= 1,
 	}
 };
 
@@ -601,6 +621,20 @@ void __init mx23_canopus_pins_init(void)
 int mxs_key_backlight_gpio_set(int set)
 {
 	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_CE2N), set);
+
+	return 0;
+}
+
+int mxs_charger_led_green_gpio_set(int set)
+{
+	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_D10), set);
+
+	return 0;
+}
+
+int mxs_charger_led_red_gpio_set(int set)
+{
+	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_RDY1), set);
 
 	return 0;
 }

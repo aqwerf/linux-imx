@@ -34,6 +34,8 @@
 #include <linux/interrupt.h>
 #include <asm/fiq.h>
 #include <linux/uaccess.h>
+#include <linux/circ_buf.h>
+#include <mach/device.h>
 
 enum application_5v_status{
 	_5v_connected_verified,
@@ -99,7 +101,11 @@ struct mxs_info {
 #endif
 
 #ifndef OS_SHUTDOWN_BATTERY_VOLTAGE_THRESHOLD_MV
+#ifdef CONFIG_MACH_MX23_CANOPUS
+#define OS_SHUTDOWN_BATTERY_VOLTAGE_THRESHOLD_MV 3400
+#else
 #define OS_SHUTDOWN_BATTERY_VOLTAGE_THRESHOLD_MV 3350
+#endif
 #endif
 
 #ifdef CONFIG_ARCH_MX23
@@ -122,7 +128,453 @@ struct mxs_info {
 #define is_usb_online()	\
 		(ddi_power_Get5vPresentFlag() ? (!!fsl_is_usb_plugged()) : 0)
 
+#ifdef CONFIG_MACH_MX23_CANOPUS
+#define MXS_DEV_NAME			"mxs_bat"
 
+#define MXS_CIRC_BUF_MAX		16
+#define MXS_CIRC_ADD(elem, cir_buf, size) \
+	{ down(&mxs_event_mutex); \
+	if (CIRC_SPACE(cir_buf.head, cir_buf.tail, size)) { \
+		cir_buf.buf[cir_buf.head] = (char)elem; \
+		cir_buf.head = (cir_buf.head + 1) & (size - 1); \
+	} else { \
+		pr_debug("Failed to notify event to the user\n"); \
+	} \
+	up(&mxs_event_mutex); }
+
+#define MXS_CIRC_REMOVE(elem, cir_buf, size) \
+	{ down(&mxs_event_mutex); \
+	if (CIRC_CNT(cir_buf.head, cir_buf.tail, size)) { \
+		elem = (int)cir_buf.buf[cir_buf.tail]; \
+		cir_buf.tail = (cir_buf.tail + 1) & (size - 1); \
+	} else { \
+		elem = -1; \
+		pr_debug("No valid notified event\n"); \
+	} \
+	up(&mxs_event_mutex); }
+
+#define MXS_BATTERY_VOLTAGE		_IOR('P', 0xa4, int)
+#define MXS_AC_ONLINE			_IOR('P', 0xa5, int)
+#define MXS_USB_ONLINE			_IOR('P', 0xa6, int)
+#define MXS_BAT_NOTIFY_USER		_IOR('P', 0xa8, int)
+#define MXS_BAT_GET_NOTIFY		_IOR('P', 0xa9, int)
+#define MXS_BAT_LED_CONTROL		_IOWR('P', 0xab, int)
+
+enum {
+	MXS_EVENT_CHARGING = 0,
+	MXS_EVENT_BATTERY,
+	MXS_EVENT_FULL_CHARGED,
+	MXS_EVENT_FAULT,
+	MXS_EVENT_NUM,
+};
+
+enum {
+	MXS_LED_GREEN = 0,
+	MXS_LED_RED,
+	MXS_LED_ALL_ON,
+	MXS_LED_ALL_OFF,
+	MXS_LED_NUM,
+};
+
+struct mxs_bat_event_cb {
+	void (*func) (void *);
+	void *param;
+};
+
+struct mxs_bat_event_cb_list {
+	/* keeps a list of subsecibed clients to an event */
+	struct list_head list;
+	/* Callback function with parameter, called whend event occurs */
+	struct mxs_bat_event_cb callback;
+};
+
+struct mxs_led_data {
+	unsigned int command;
+	unsigned int control;
+};
+
+static int mxs_bat_major;
+static struct class *mxs_dev_class;
+static struct fasync_struct *mxs_bat_queue;
+static struct circ_buf mxs_event;
+static struct list_head mxs_events[MXS_EVENT_NUM];
+static struct mxs_info *mxs_pdev_info;
+static int bat_fault_led_status;
+static int _main_state = MXS_EVENT_BATTERY;
+static DECLARE_MUTEX(mxs_event_mutex);
+
+static void _mxs_bat_fault_led_work(struct work_struct *work);
+DECLARE_DELAYED_WORK(_bat_fault_led, _mxs_bat_fault_led_work);
+
+static void mxs_bat_led_status(int state)
+{
+	int red, green;
+
+	switch (state) {
+	case MXS_LED_GREEN:
+		red = 0; green = 1;
+		break;
+	case MXS_LED_RED:
+		red = 1; green = 0;
+		break;
+	case MXS_LED_ALL_ON:
+		red = 1; green = 1;
+		break;
+	case MXS_LED_ALL_OFF:
+		red = 0; green = 0;
+		break;
+	default:
+		printk(KERN_DEBUG "BATTERRY LED NOT CONTROL..\n");
+		return ;
+	}
+
+	mxs_charger_led_green_gpio_set(!green);
+	mxs_charger_led_red_gpio_set(!red);
+}
+
+static void mxs_bat_fault_led_control(int val)
+{
+	if (val)
+		mxs_bat_led_status(MXS_LED_ALL_ON);
+	else
+		mxs_bat_led_status(MXS_LED_ALL_OFF);
+}
+
+static void _change_state(int new_state)
+{
+	const char *mode = "";
+	struct list_head *p;
+	struct mxs_bat_event_cb_list *temp = NULL;
+
+	/* state control */
+	if (new_state == _main_state)
+		return;
+
+	_main_state = new_state;
+
+	if (!list_empty(&mxs_events[_main_state])) {
+		list_for_each(p, &mxs_events[_main_state]) {
+			temp = list_entry(p,
+					struct mxs_bat_event_cb_list,
+					list);
+			temp->callback.func(temp->callback.param);
+		}
+	}
+
+	cancel_delayed_work(&_bat_fault_led);
+
+	switch (_main_state) {
+	case MXS_EVENT_CHARGING:
+		mode = "MXS_EVENT_CHARGING";
+		mxs_bat_led_status(MXS_LED_RED);
+		break;
+	case MXS_EVENT_BATTERY:
+		mode = "MXS_EVENT_BATTERY";
+		mxs_bat_led_status(MXS_LED_ALL_OFF);
+		break;
+	case MXS_EVENT_FULL_CHARGED:
+		mode = "MXS_EVENT_FULL_CHARGED";
+		mxs_bat_led_status(MXS_LED_GREEN);
+		break;
+	case MXS_EVENT_FAULT:
+		mode = "MXS_EVENT_FAULT";
+		bat_fault_led_status = 0;
+		_mxs_bat_fault_led_work(NULL);
+	default:
+		break;
+	}
+	printk(KERN_DEBUG "mxs-power: mode = %s\n", mode);
+}
+
+static int mxs_bat_charging_status(void)
+{
+	int ret;
+	struct mxs_info *info = mxs_pdev_info;
+	ddi_bc_State_t state = ddi_bc_GetState();
+
+	switch (state) {
+	case DDI_BC_STATE_CONDITIONING:
+	case DDI_BC_STATE_CHARGING:
+	case DDI_BC_STATE_TOPPING_OFF:
+		ret = POWER_SUPPLY_STATUS_CHARGING;
+		break;
+	case DDI_BC_STATE_DISABLED:
+		ret = (ddi_power_Get5vPresentFlag()
+				&& !info->onboard_vbus5v_online) ?
+			POWER_SUPPLY_STATUS_NOT_CHARGING :
+			POWER_SUPPLY_STATUS_DISCHARGING;
+		break;
+	default:
+		/* TODO: detect full */
+		ret = POWER_SUPPLY_STATUS_NOT_CHARGING;
+		break;
+	}
+
+	return ret;
+}
+
+static int mxs_bat_health_status(void)
+{
+	int ret;
+	int die_temp_alarm = ddi_bc_RampGetDieTempAlarm();
+	int bat_temp_alarm = ddi_bc_RampGetBatteryTempAlarm();
+	ddi_bc_State_t state;
+	ddi_bc_BrokenReason_t reason;
+
+	if (die_temp_alarm || bat_temp_alarm) {
+		ret = POWER_SUPPLY_HEALTH_OVERHEAT;
+	} else {
+		state = ddi_bc_GetState();
+		switch (state) {
+		case DDI_BC_STATE_BROKEN:
+			reason = ddi_bc_GetBrokenReason();
+			ret =
+				(reason == DDI_BC_BROKEN_CHARGING_TIMEOUT) ?
+				POWER_SUPPLY_HEALTH_DEAD :
+				POWER_SUPPLY_HEALTH_UNSPEC_FAILURE;
+			break;
+		case DDI_BC_STATE_UNINITIALIZED:
+			ret = POWER_SUPPLY_HEALTH_UNKNOWN;
+			break;
+		default:
+			ret = POWER_SUPPLY_HEALTH_GOOD;
+			break;
+		}
+	}
+
+	return ret;
+}
+
+static void _mxs_bat_fault_led_work(struct work_struct *work)
+{
+	if (bat_fault_led_status) {
+		bat_fault_led_status = 0;
+		mxs_bat_fault_led_control(1);
+	} else {
+		bat_fault_led_status = 1;
+		mxs_bat_fault_led_control(0);
+	}
+
+	schedule_delayed_work(&_bat_fault_led, msecs_to_jiffies(500));
+}
+
+static int mxs_bat_led_control(unsigned long arg)
+{
+	struct mxs_led_data led_data = {0};
+
+	if (copy_from_user((void *)&led_data,
+				(const void *)arg,
+				sizeof(led_data)))
+		return -EFAULT;
+
+	if (led_data.command == MXS_LED_GREEN)
+		mxs_charger_led_green_gpio_set(!led_data.control);
+	else
+		mxs_charger_led_red_gpio_set(!led_data.control);
+
+	return 0;
+}
+
+static void mxs_bat_event_list_init(void)
+{
+	int i;
+
+	for (i = 0; i < MXS_EVENT_NUM; i++)
+		INIT_LIST_HEAD(&mxs_events[i]);
+
+	sema_init(&mxs_event_mutex, 1);
+}
+
+static void mxs_bat_callbackfn(void *event)
+{
+	printk(KERN_DEBUG "\n\n DETECT BAT EVENT : %d\n\n",
+			(unsigned int)event);
+}
+
+static void mxs_bat_user_notify_callback(void *event)
+{
+	printk(KERN_DEBUG "user_notify_callback ...\n");
+
+	MXS_CIRC_ADD((int)event, mxs_event, MXS_CIRC_BUF_MAX);
+	kill_fasync(&mxs_bat_queue, SIGIO, POLL_IN);
+}
+
+static int mxs_bat_event_subscribe(int event,
+		struct mxs_bat_event_cb callback)
+{
+	struct mxs_bat_event_cb_list *new = NULL;
+
+	pr_debug("Event: %d Subscribe\n", event);
+
+	/* Check wheter the event & callback are valid? */
+	if (event >= MXS_EVENT_NUM) {
+		printk(KERN_DEBUG "Invalid Event : %d\n", event);
+		return -EINVAL;
+	}
+
+	if (NULL == callback.func) {
+		pr_debug("Null or Invalid Callback\n");
+		return -EINVAL;
+	}
+
+	/* Create a new linked list entry */
+	new = kmalloc(sizeof(struct mxs_bat_event_cb_list), GFP_KERNEL);
+	if (NULL == new)
+		return -ENOMEM;
+
+	/* Initialize the list node fields */
+	new->callback.func = callback.func;
+	new->callback.param = callback.param;
+	INIT_LIST_HEAD(&new->list);
+
+	/* Obtain the lock to access the list */
+	if (down_interruptible(&mxs_event_mutex)) {
+		kfree(new);
+		return -EINTR;
+	}
+
+	/* Add this entry to the event list */
+	list_add_tail(&new->list, &mxs_events[event]);
+
+	/* Release the lock */
+	up(&mxs_event_mutex);
+
+	return 0;
+}
+
+static int mxs_bat_event_unsubscribe(int event,
+		struct mxs_bat_event_cb callback)
+{
+	struct list_head *p;
+	struct list_head *n;
+	struct mxs_bat_event_cb_list *temp = NULL;
+	int ret = -1;
+
+	pr_debug("Event:%d Unsubscribe\n", event);
+
+	/* Check whether the event & callback are valid? */
+	if (event >= MXS_EVENT_NUM) {
+		printk(KERN_DEBUG "Invalid Event:%d\n", event);
+		return -EINVAL;
+	}
+
+	if (NULL == callback.func) {
+		pr_debug("Null or Invalid Callback\n");
+		return -EINVAL;
+	}
+
+	/* Obtain the lock to access the list */
+	if (down_interruptible(&mxs_event_mutex))
+		return -EINTR;
+
+	/* Find the entry in the list */
+	list_for_each_safe(p, n, &mxs_events[event]) {
+		temp = list_entry(p, struct mxs_bat_event_cb_list, list);
+		if (temp->callback.func == callback.func
+		    && temp->callback.param == callback.param) {
+			/* Remove the entry from the list */
+			list_del(p);
+			kfree(temp);
+			ret = 0;
+			break;
+		}
+	}
+
+	/* Release the lock */
+	up(&mxs_event_mutex);
+
+	return ret;
+}
+
+static int mxs_bat_open(struct inode *inode, struct file *file)
+{
+	return 0;
+}
+
+static int mxs_bat_release(struct inode *inode, struct file *file)
+{
+	int i;
+	struct mxs_bat_event_cb event_sub;
+
+	for (i = 0; i < MXS_EVENT_NUM; i++) {
+		event_sub.func = mxs_bat_user_notify_callback;
+		event_sub.param = (void *)i;
+		mxs_bat_event_unsubscribe(i, event_sub);
+
+		event_sub.func = mxs_bat_callbackfn;
+		mxs_bat_event_unsubscribe(i, event_sub);
+	}
+
+	mxs_event.head = mxs_event.tail = 0;
+
+	return 0;
+}
+
+static int mxs_bat_ioctl(struct inode *inode, struct file *file,
+		unsigned int cmd, unsigned long arg)
+{
+	int ret = 0;
+	int val = 0;
+	struct mxs_bat_event_cb event_sub;
+	int event;
+
+	if (_IOC_TYPE(cmd) != 'P')
+		return -ENOTTY;
+
+	switch (cmd) {
+	case MXS_BATTERY_VOLTAGE:
+		val = ddi_power_GetBattery() * 1000;
+		if (copy_to_user((int *) arg, &val, sizeof(int)))
+			return -EFAULT;
+		break;
+	case MXS_AC_ONLINE:
+		val = is_ac_online();
+		if (copy_to_user((int *) arg, &val, sizeof(int)))
+			return -EFAULT;
+		break;
+	case MXS_USB_ONLINE:
+		val = is_usb_online();
+		if (copy_to_user((int *) arg, &val, sizeof(int)))
+			return -EFAULT;
+		break;
+	case MXS_BAT_NOTIFY_USER:
+		if (get_user(event, (int __user *)arg))
+			return -EFAULT;
+
+		event_sub.func = mxs_bat_user_notify_callback;
+		event_sub.param = (void *)event;
+		ret = mxs_bat_event_subscribe(event, event_sub);
+		break;
+	case MXS_BAT_GET_NOTIFY:
+		MXS_CIRC_REMOVE(event, mxs_event, MXS_CIRC_BUF_MAX);
+		if (put_user(event, (int __user *)arg))
+			return -EFAULT;
+		break;
+	case MXS_BAT_LED_CONTROL:
+		ret = mxs_bat_led_control(arg);
+		break;
+	default:
+		printk(KERN_DEBUG "mxs bat : unsupported ioctl command 0x%x\n",
+				cmd);
+		break;
+	}
+
+	return ret;
+}
+
+static int mxs_bat_fasync(int fd, struct file *filp, int mode)
+{
+	return fasync_helper(fd, filp, mode, &mxs_bat_queue);
+}
+
+static const struct file_operations mxs_bat_fos = {
+	.owner		= THIS_MODULE,
+	.ioctl		= mxs_bat_ioctl,
+	.open		= mxs_bat_open,
+	.release	= mxs_bat_release,
+	.fasync		= mxs_bat_fasync,
+};
+#endif
 
 void init_protection(struct mxs_info *info)
 {
@@ -267,8 +719,20 @@ static void check_and_handle_5v_connection(struct mxs_info *info)
 				 * turn on vddio interrupts again
 				 */
 				ddi_power_enable_vddio_interrupt(true);
+
+#ifdef CONFIG_MACH_MX23_CANOPUS
+				_change_state(MXS_EVENT_CHARGING);
+#endif
 			}
 		}
+#ifdef CONFIG_MACH_MX23_CANOPUS
+		else {
+			if (_main_state == MXS_EVENT_CHARGING &&
+					mxs_bat_charging_status() ==
+					POWER_SUPPLY_STATUS_DISCHARGING)
+				_change_state(MXS_EVENT_FULL_CHARGED);
+		}
+#endif
 		break;
 
 	case new_5v_disconnection:
@@ -315,6 +779,9 @@ static void check_and_handle_5v_connection(struct mxs_info *info)
 				| (0x20 << BP_POWER_5VCTRL_CHARGE_4P2_ILIMIT),
 				REGS_POWER_BASE + HW_POWER_5VCTRL);
 
+#ifdef CONFIG_MACH_MX23_CANOPUS
+				_change_state(MXS_EVENT_BATTERY);
+#endif
 			}
 		}
 
@@ -530,6 +997,18 @@ static void state_machine_work(struct work_struct *work)
 	handle_battery_voltage_changes(info);
 
 	check_and_handle_5v_connection(info);
+
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	int ret = mxs_bat_health_status();
+	if (ret > POWER_SUPPLY_HEALTH_GOOD) {
+		if (ret == POWER_SUPPLY_HEALTH_DEAD)
+			_change_state(MXS_EVENT_FULL_CHARGED);
+		else if (ddi_power_GetBattery() * 1000 > 4200000)
+			_change_state(MXS_EVENT_FULL_CHARGED);
+		else
+			_change_state(MXS_EVENT_FAULT);
+	}
+#endif
 
 	if ((info->sm_5v_connection_status != _5v_connected_verified) ||
 			!(info->regulator)) {
@@ -773,65 +1252,6 @@ static irqreturn_t mxs_irq_vdd5v(int irq, void *cookie)
 	return IRQ_HANDLED;
 }
 
-#ifdef CONFIG_MACH_MX23_CANOPUS
-#define MXS_DEV_NAME			"mxs_bat"
-
-#define MXS_BATTERY_VOLTAGE		_IOR('P', 0xa4, int)
-#define MXS_AC_ONLINE			_IOR('P', 0xa5, int)
-#define MXS_USB_ONLINE			_IOR('P', 0xa6, int)
-
-static int mxs_bat_open(struct inode *inode, struct file *file)
-{
-	return 0;
-}
-
-static int mxs_bat_release(struct inode *inode, struct file *file)
-{
-	return 0;
-}
-
-static int mxs_bat_ioctl(struct inode *inode, struct file *file,
-		unsigned int cmd, unsigned long arg)
-{
-	int ret = 0;
-	int val = 0;
-
-	if (_IOC_TYPE(cmd) != 'P')
-		return -ENOTTY;
-
-	switch (cmd) {
-	case MXS_BATTERY_VOLTAGE:
-		val = ddi_power_GetBattery() * 1000;
-		if (copy_to_user((int *) arg, &val, sizeof(int)))
-			return -EFAULT;
-		break;
-	case MXS_AC_ONLINE:
-		val = is_ac_online();
-		if (copy_to_user((int *) arg, &val, sizeof(int)))
-			return -EFAULT;
-		break;
-	case MXS_USB_ONLINE:
-		val = is_usb_online();
-		if (copy_to_user((int *) arg, &val, sizeof(int)))
-			return -EFAULT;
-		break;
-	default:
-		printk(KERN_DEBUG "mxs bat : unsupported ioctl command 0x%x\n",
-				cmd);
-		break;
-	}
-
-	return ret;
-}
-
-static const struct file_operations mxs_bat_fos = {
-	.owner		= THIS_MODULE,
-	.ioctl		= mxs_bat_ioctl,
-	.open		= mxs_bat_open,
-	.release	= mxs_bat_release,
-};
-#endif
-
 static int mxs_bat_probe(struct platform_device *pdev)
 {
 	struct mxs_info *info;
@@ -946,10 +1366,9 @@ static int mxs_bat_probe(struct platform_device *pdev)
 	info->usb.get_property   = mxs_power_get_property;
 
 #ifdef CONFIG_MACH_MX23_CANOPUS
-	int mxs_bat_major;
-	struct class *mxs_dev_class;
 	struct class_device *mxs_device;
 
+	mxs_pdev_info = platform_get_drvdata(pdev);
 	mxs_bat_major = register_chrdev(0, MXS_DEV_NAME, &mxs_bat_fos);
 	if (mxs_bat_major < 0) {
 		printk(KERN_DEBUG "unable to get a major for mxs_bat\n");
@@ -971,6 +1390,15 @@ static int mxs_bat_probe(struct platform_device *pdev)
 		ret = -1;
 		goto dev_failed;
 	}
+
+	mxs_event.buf = kmalloc(MXS_CIRC_BUF_MAX * sizeof(char), GFP_KERNEL);
+	if (NULL == mxs_event.buf) {
+		ret = -ENOMEM;
+		goto buf_failed;
+	}
+
+	mxs_bat_event_list_init();
+	mxs_event.head = mxs_event.tail = 0;
 #endif
 
 	init_timer(&info->sm_timer);
@@ -988,7 +1416,7 @@ static int mxs_bat_probe(struct platform_device *pdev)
 	ret = bc_sm_restart(info);
 	if (ret)
 #ifdef CONFIG_MACH_MX23_CANOPUS
-		goto dev_failed;
+		goto buf_failed;
 #else
 		goto free_info;
 #endif
@@ -1103,6 +1531,10 @@ free_irq:
 stop_sm:
 	ddi_bc_ShutDown();
 #ifdef CONFIG_MACH_MX23_CANOPUS
+buf_failed:
+#if 0
+	class_device_destroy(mxs_dev_class, MKDEV(mxs_bat_major, 0));
+#endif
 dev_failed:
 	class_destroy(mxs_dev_class);
 class_failed:
@@ -1132,6 +1564,16 @@ static int mxs_bat_remove(struct platform_device *pdev)
 	power_supply_unregister(&info->usb);
 	power_supply_unregister(&info->ac);
 	power_supply_unregister(&info->bat);
+
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	mxs_pdev_info = NULL;
+#if 0
+	class_device_destroy(mxs_dev_class, MKDEV(mxs_bat_major, 0));
+#endif
+	class_destroy(mxs_dev_class);
+	unregister_chrdev(mxs_bat_major, MXS_DEV_NAME);
+#endif
+
 	return 0;
 }
 

@@ -69,6 +69,11 @@ struct mxs_lradc_plat_data {
 	unsigned int battery_voltage;
 };
 
+#ifdef CONFIG_MACH_MX23_CANOPUS
+extern int mxs_charger_led_green_gpio_set(int set);
+extern int mxs_charger_led_red_gpio_set(int set);
+#endif
+
 struct mxskbd_keypair {
 	int raw;
 	int kcode;
