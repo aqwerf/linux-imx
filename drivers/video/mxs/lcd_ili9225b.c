@@ -544,13 +544,13 @@ _bl_init(struct mxs_platform_bl_data *data)
 
 	__raw_writel(BF_PWM_ACTIVEn_INACTIVE(0) |
 		     BF_PWM_ACTIVEn_ACTIVE(0),
-		     REGS_PWM_BASE + HW_PWM_ACTIVEn(3));
+		     REGS_PWM_BASE + HW_PWM_ACTIVEn(2));
 	__raw_writel(BF_PWM_PERIODn_CDIV(6) | /* divide by 64 */
 		     BF_PWM_PERIODn_INACTIVE_STATE(2) |	/* low */
 		     BF_PWM_PERIODn_ACTIVE_STATE(3) | /* high */
 		     BF_PWM_PERIODn_PERIOD(599),
-		     REGS_PWM_BASE + HW_PWM_PERIODn(3));
-	__raw_writel(BM_PWM_CTRL_PWM3_ENABLE, REGS_PWM_BASE + HW_PWM_CTRL_SET);
+		     REGS_PWM_BASE + HW_PWM_PERIODn(2));
+	__raw_writel(BM_PWM_CTRL_PWM2_ENABLE, REGS_PWM_BASE + HW_PWM_CTRL_SET);
 
 	return 0;
 }
@@ -560,13 +560,13 @@ _bl_free(struct mxs_platform_bl_data *data)
 {
 	__raw_writel(BF_PWM_ACTIVEn_INACTIVE(0) |
 		     BF_PWM_ACTIVEn_ACTIVE(0),
-		     REGS_PWM_BASE + HW_PWM_ACTIVEn(3));
+		     REGS_PWM_BASE + HW_PWM_ACTIVEn(2));
 	__raw_writel(BF_PWM_PERIODn_CDIV(6) | /* divide by 64 */
 		     BF_PWM_PERIODn_INACTIVE_STATE(2) | /* low */
 		     BF_PWM_PERIODn_ACTIVE_STATE(3) | /* high */
 		     BF_PWM_PERIODn_PERIOD(599),
-		     REGS_PWM_BASE + HW_PWM_PERIODn(3));
-	__raw_writel(BM_PWM_CTRL_PWM3_ENABLE, REGS_PWM_BASE + HW_PWM_CTRL_CLR);
+		     REGS_PWM_BASE + HW_PWM_PERIODn(2));
+	__raw_writel(BM_PWM_CTRL_PWM2_ENABLE, REGS_PWM_BASE + HW_PWM_CTRL_CLR);
 
 	clk_disable(_pwm_clk);
 	clk_put(_pwm_clk);
@@ -624,19 +624,19 @@ _bl_set_intensity(struct mxs_platform_bl_data *data,
 
 	__raw_writel(BF_PWM_ACTIVEn_INACTIVE(scaled_int) |
 			BF_PWM_ACTIVEn_ACTIVE(0),
-			REGS_PWM_BASE + HW_PWM_ACTIVEn(3));
+			REGS_PWM_BASE + HW_PWM_ACTIVEn(2));
 	if (scaled_int >= 99) {
 		__raw_writel(BF_PWM_PERIODn_CDIV(6) | /* divide by 64 */
 				BF_PWM_PERIODn_INACTIVE_STATE(3) | /* high */
 				BF_PWM_PERIODn_ACTIVE_STATE(3) | /* high */
 				BF_PWM_PERIODn_PERIOD(399),
-				REGS_PWM_BASE + HW_PWM_PERIODn(3));
+				REGS_PWM_BASE + HW_PWM_PERIODn(2));
 	} else {
 		__raw_writel(BF_PWM_PERIODn_CDIV(6) | /* divide by 64 */
 				BF_PWM_PERIODn_INACTIVE_STATE(2) | /* low */
 				BF_PWM_PERIODn_ACTIVE_STATE(3) | /* high */
 				BF_PWM_PERIODn_PERIOD(399),
-				REGS_PWM_BASE + HW_PWM_PERIODn(3));
+				REGS_PWM_BASE + HW_PWM_PERIODn(2));
 	}
 
 	return 0;

@@ -266,7 +266,7 @@ static struct pin_desc canopus_fixed_pins[] = {
 	},
 	{
 		.name		= "LCD_BACKLIGHT",
-		.id		= PINID_PWM3,
+		.id		= PINID_PWM2,
 		.fun		= PIN_FUN1,
 		.strength	= PAD_8MA,
 		.voltage	= PAD_3_3V,
@@ -495,43 +495,54 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.pull		= 0,
 	},
 #endif
-	/* Athers ATH6KL control */
+	/* Active High,  AR6003 Internal PMU Enable */
 	{
 		.name		= "ATH6KL_PMU",
-		.id		= PINID_GPMI_D11,
+		.id		= PINID_GPMI_RDY3,
 		.fun		= PIN_GPIO,
 		.voltage	= PAD_3_3V,
 		.drive		= 1,
 		.output		= 1,
 		.data		= 1,
 	},
+	/* Acrtive Low, Reset signal to power down the AR6003 */
 	{
 		.name		= "ATH6KL_PWD_L",
-		.id		= PINID_GPMI_D08,
+		.id		= PINID_GPMI_RDY2,
 		.fun		= PIN_GPIO,
 		.voltage	= PAD_3_3V,
 		.drive		= 1,
 		.output		= 1,
 		.data		= 1,
 	},
+	/* Optional Wake On Wireless output */
 	{
 		.name		= "ATH6KL_WOW",
-		.id		= PINID_GPMI_D09,
+		.id		= PINID_ROTARYB,
 		.fun		= PIN_GPIO,
 	},
-	/* keypad backlight */
+	/* External 24MHz Clock, to use instead of crystal oscillator */
 	{
-		.name		= "KEY_BACKLIGHT",
-		.id		= PINID_GPMI_CE2N,
+		.name		= "ATH6KL_ECLK",
+		.id		= PINID_PWM3,
+		.fun		= PIN_FUN1,
+		.strength	= PAD_8MA,
+		.voltage	= PAD_3_3V,
+		.drive		= 1,
+	},
+	/* Key PAD Backlight LED PWM Control signal */
+	{
+		.name		= "KEY_LED_CTRL",
+		.id		= PINID_PWM4,
 		.fun		= PIN_GPIO,
 		.voltage	= PAD_3_3V,
 		.drive		= 1,
 		.output		= 1,
 		.data		= 0,
 	},
-	/* charger led green */
+	/* Active Low, Charge State_Green LED On/Off Signal */
 	{
-		.name		= "CHARGER_LED_GREEN",
+		.name		= "CHGSTS_GLED",
 		.id		= PINID_GPMI_D10,
 		.fun		= PIN_GPIO,
 		.voltage	= PAD_3_3V,
@@ -539,16 +550,60 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.output		= 1,
 		.data		= 1,
 	},
-	/* charger led red */
+	/* Active Low, Charge State_RED LED On/Off Signal */
 	{
-		.name		= "CHARGER_LED_RED",
+		.name		= "CHGSTS_RLED",
 		.id		= PINID_GPMI_RDY1,
 		.fun		= PIN_GPIO,
 		.voltage	= PAD_3_3V,
 		.drive		= 1,
 		.output		= 1,
 		.data		= 1,
-	}
+	},
+	/* Active High, Vibration Motor-On/Off Driving Signal */
+	{
+		.name		= "MOTOR_CTRL",
+		.id		= PINID_GPMI_D15,
+		.fun		= PIN_GPIO,
+		.voltage	= PAD_3_3V,
+		.drive		= 1,
+		.output		= 1,
+		.data		= 0,
+	},
+	/* Earmicrop phone Inject Detection Signal */
+	{
+		.name		= "HDET",
+		.id		= PINID_LCD_DOTCK,
+		.fun		= PIN_GPIO,
+	},
+	/* Receiver Amp Enable Signal in the case of Global Model */
+	{
+		.name		= "RCV_EN",
+		.id		= PINID_GPMI_D09,
+		.fun		= PIN_GPIO,
+		.voltage	= PAD_3_3V,
+		.drive		= 1,
+		.output		= 1,
+		.data		= 0,
+	},
+	/* Interrupt Input Siganl for Key Pressing */
+	{
+		.name		= "KEY_INT",
+		.id		= PINID_GPMI_D11,
+		.fun		= PIN_GPIO,
+	},
+	/* Factory Mode Input, Normal Mode=High, Factory Test Mode=Low */
+	{
+		.name		= "FAC_MODE",
+		.id		= PINID_GPMI_D12,
+		.fun		= PIN_GPIO,
+	},
+	/* Cal Mode Control Input, Normal Mode=High, Cal Mode=Low */
+	{
+		.name		= "CAL_MODE",
+		.id		= PINID_I2C_SDA,
+		.fun		= PIN_GPIO,
+	},
 };
 
 static void mxs_request_pins(struct pin_desc *pins, int nr)
@@ -620,7 +675,7 @@ void __init mx23_canopus_pins_init(void)
 
 int mxs_key_backlight_gpio_set(int set)
 {
-	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_CE2N), set);
+	gpio_set_value(MXS_PIN_TO_GPIO(PINID_PWM4), set);
 
 	return 0;
 }
