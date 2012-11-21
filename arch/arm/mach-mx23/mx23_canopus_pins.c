@@ -398,14 +398,6 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.drive		= 1
 	},
 	{
-		.name		= "GPMI RDY1",
-		.id		= PINID_GPMI_RDY1,
-		.fun		= PIN_FUN1,
-		.strength	= PAD_4MA,
-		.voltage	= PAD_3_3V,
-		.drive		= 1
-	},
-	{
 		.name		= "GPMI CE0-",
 		.id		= PINID_GPMI_CE0N,
 		.fun		= PIN_FUN1,
@@ -545,8 +537,7 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.name		= "CHGSTS_GLED",
 		.id		= PINID_GPMI_D10,
 		.fun		= PIN_GPIO,
-		.voltage	= PAD_3_3V,
-		.drive		= 1,
+		.drive		= 0,
 		.output		= 1,
 		.data		= 1,
 	},
@@ -555,8 +546,7 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.name		= "CHGSTS_RLED",
 		.id		= PINID_GPMI_RDY1,
 		.fun		= PIN_GPIO,
-		.voltage	= PAD_3_3V,
-		.drive		= 1,
+		.drive		= 0,
 		.output		= 1,
 		.data		= 1,
 	},
