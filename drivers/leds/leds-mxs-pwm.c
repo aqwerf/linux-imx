@@ -131,7 +131,12 @@ static int __devinit mxs_pwm_led_probe(struct platform_device *pdev)
 		leds_in_use++;
 
 		/* Set default brightness */
+#ifdef CONFIG_MACH_MX23_CANOPUS
+		mxs_pwm_led_brightness_set(led,
+				leds.leds[i].default_brightness);
+#else
 		mxs_pwm_led_brightness_set(led, LED_HALF);
+#endif
 	}
 
 	if (leds_in_use == 0) {

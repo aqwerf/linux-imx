@@ -125,6 +125,9 @@ struct mxs_pwm_led {
 	struct led_classdev dev;
 	const char *name;
 	unsigned int pwm;
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	int default_brightness;
+#endif
 };
 
 struct mxs_pwm_leds_plat_data {

@@ -526,11 +526,10 @@ static struct pin_desc canopus_fixed_pins[] = {
 	{
 		.name		= "KEY_LED_CTRL",
 		.id		= PINID_PWM4,
-		.fun		= PIN_GPIO,
+		.fun		= PIN_FUN1,
+		.strength	= PAD_8MA,
 		.voltage	= PAD_3_3V,
 		.drive		= 1,
-		.output		= 1,
-		.data		= 0,
 	},
 	/* Active Low, Charge State_Green LED On/Off Signal */
 	{

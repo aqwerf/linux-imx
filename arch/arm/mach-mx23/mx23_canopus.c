@@ -23,6 +23,7 @@
 #include <linux/platform_device.h>
 #include <linux/i2c.h>
 #include <linux/spi/spi.h>
+#include <linux/err.h>
 
 #include <asm/setup.h>
 #include <asm/mach-types.h>
@@ -52,10 +53,51 @@ static void __init mx23_canopus_init_adc(void)
 	mxs_add_device(pdev, 3);
 }
 
+#if defined(CONFIG_LEDS_MXS) || defined(CONFIG_LEDS_MXS_MODULE)
+static struct mxs_pwm_led  mx23_canopus_led_pwm[1] = {
+	[0] = {
+		.name = "led-pwm4-keybl",
+		.pwm = 4,
+#ifdef CONFIG_MACH_MX23_CANOPUS
+		.default_brightness = LED_FULL,
+#endif
+		},
+};
+
+struct mxs_pwm_leds_plat_data mx23_canopus_led_data = {
+	.num = ARRAY_SIZE(mx23_canopus_led_pwm),
+	.leds = mx23_canopus_led_pwm,
+};
+
+static struct resource mx23_canopus_led_res = {
+	.flags = IORESOURCE_MEM,
+	.start = PWM_PHYS_ADDR,
+	.end   = PWM_PHYS_ADDR + 0x3FFF,
+};
+
+static void __init mx23_canopus_init_leds(void)
+{
+	struct platform_device *pdev;
+
+	pdev = mxs_get_device("mxs-leds", 0);
+	if (pdev == NULL || IS_ERR(pdev))
+		return;
+
+	pdev->resource = &mx23_canopus_led_res;
+	pdev->num_resources = 1;
+	pdev->dev.platform_data = &mx23_canopus_led_data;
+	mxs_add_device(pdev, 3);
+}
+#endif
+
 static void __init mx23_canopus_device_init(void)
 {
 #if defined(CONFIG_SND_MXS_SOC_ADC) || defined(CONFIG_SND_MXS_SOC_ADC_MODULE)
 	mx23_canopus_init_adc();
+#endif
+
+#if defined(CONFIG_LEDS_MXS) || defined(CONFIG_LEDS_MXS_MODULE)
+	mx23_canopus_init_leds();
 #endif
 }
 
