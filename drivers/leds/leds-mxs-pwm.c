@@ -60,13 +60,15 @@ static void mxs_pwm_led_brightness_set(struct led_classdev *pled,
 	if (pwm_led->pwm < CONFIG_MXS_PWM_CHANNELS) {
 		__raw_writel(BF_PWM_CTRL_PWM_ENABLE(pwm_led->pwm),
 			     leds.base + HW_PWM_CTRL_CLR);
-		__raw_writel(BF_PWM_ACTIVEn_INACTIVE(LED_FULL) |
+		if (value > 0) {
+			__raw_writel(BF_PWM_ACTIVEn_INACTIVE(LED_FULL) |
 				BF_PWM_ACTIVEn_ACTIVE(value),
-			     leds.base + HW_PWM_ACTIVEn(pwm_led->pwm));
-		__raw_writel(BF_PWM_PERIODn_SETTINGS,
-			     leds.base + HW_PWM_PERIODn(pwm_led->pwm));
-		__raw_writel(BF_PWM_CTRL_PWM_ENABLE(pwm_led->pwm),
-			     leds.base + HW_PWM_CTRL_SET);
+				leds.base + HW_PWM_ACTIVEn(pwm_led->pwm));
+			__raw_writel(BF_PWM_PERIODn_SETTINGS,
+				leds.base + HW_PWM_PERIODn(pwm_led->pwm));
+			__raw_writel(BF_PWM_CTRL_PWM_ENABLE(pwm_led->pwm),
+				leds.base + HW_PWM_CTRL_SET);
+		}
 	}
 }
 
