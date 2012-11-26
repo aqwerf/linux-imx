@@ -441,6 +441,11 @@ static char * __init unpack_to_rootfs(char *buf, unsigned len)
 			buf++;
 			len--;
 			this_header++;
+#ifdef CONFIG_MACH_MX23_CANOPUS
+			/* stop when sixteen zeros in buf. */
+			if (this_header >= 0x0f)
+				break;
+#endif
 			continue;
 		}
 		this_header = 0;
@@ -450,6 +455,10 @@ static char * __init unpack_to_rootfs(char *buf, unsigned len)
 				   &my_inptr, error);
 			if (res)
 				error("decompressor failed");
+#ifdef CONFIG_MACH_MX23_CANOPUS
+			else
+				break; /* stop after decompressed */
+#endif
 		} else if (compress_name) {
 			if (!message) {
 				snprintf(msg_buf, sizeof msg_buf,
