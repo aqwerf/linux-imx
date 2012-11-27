@@ -284,6 +284,7 @@ static inline void do_standby(void)
 	local_fiq_disable();
 #ifdef CONFIG_MACH_MX23_CANOPUS
 	mxs_wow_irq_enable();
+	mxs_key_irq_enable();
 #endif
 	mxs_nomatch_suspend_timer();
 

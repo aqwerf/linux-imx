@@ -581,6 +581,7 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.name		= "KEY_INT",
 		.id		= PINID_GPMI_D11,
 		.fun		= PIN_GPIO,
+		.irq		= 1,
 	},
 	/* Factory Mode Input, Normal Mode=High, Factory Test Mode=Low */
 	{
@@ -700,6 +701,15 @@ int mxs_charger_led_red_gpio_set(int set)
 void mxs_wow_irq_enable(void)
 {
 	unsigned int irq = gpio_to_irq(MXS_PIN_TO_GPIO(PINID_ROTARYB));
+	struct irq_desc *desc = irq_to_desc(irq);
+
+	desc->chip->unmask(irq);
+	desc->status &= ~IRQ_MASKED;
+}
+
+void mxs_key_irq_enable(void)
+{
+	unsigned int irq = gpio_to_irq(MXS_PIN_TO_GPIO(PINID_GPMI_D11));
 	struct irq_desc *desc = irq_to_desc(irq);
 
 	desc->chip->unmask(irq);
