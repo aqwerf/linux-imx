@@ -113,6 +113,7 @@ struct pin_desc {
 	unsigned pull:1;
 	unsigned output:1;
 	unsigned data:1;
+	unsigned irq:1;
 };
 
 struct pin_bank {

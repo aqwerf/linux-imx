@@ -512,6 +512,7 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.name		= "ATH6KL_WOW",
 		.id		= PINID_ROTARYB,
 		.fun		= PIN_GPIO,
+		.irq		= 1,
 	},
 	/* External 24MHz Clock, to use instead of crystal oscillator */
 	{
@@ -599,6 +600,7 @@ static void mxs_request_pins(struct pin_desc *pins, int nr)
 {
 	int i;
 	struct pin_desc *pin;
+	unsigned gpio;
 
 	/* configure the pins */
 	for (i = 0; i < nr; i++) {
@@ -619,6 +621,12 @@ static void mxs_request_pins(struct pin_desc *pins, int nr)
 						      pin->data);
 			else
 				gpio_direction_input(MXS_PIN_TO_GPIO(pin->id));
+
+			if (pin->irq) {
+				gpio = MXS_PIN_TO_GPIO(pin->id);
+				set_irq_type(gpio_to_irq(gpio),
+						IRQ_TYPE_LEVEL_HIGH);
+			}
 		}
 	}
 }
@@ -627,13 +635,19 @@ static void mxs_release_pins(struct pin_desc *pins, int nr)
 {
 	int i;
 	struct pin_desc *pin;
+	unsigned gpio;
 
 	/* release the pins */
 	for (i = 0; i < nr; i++) {
 		pin = &pins[i];
-		if (pin->fun == PIN_GPIO)
+		if (pin->fun == PIN_GPIO) {
 			gpio_free(MXS_PIN_TO_GPIO(pin->id));
-		else
+			if (pin->irq) {
+				gpio = MXS_PIN_TO_GPIO(pin->id);
+				set_irq_type(gpio_to_irq(gpio),
+						IRQ_TYPE_NONE);
+			}
+		} else
 			mxs_release_pin(pin->id, pin->name);
 	}
 }
@@ -681,4 +695,13 @@ int mxs_charger_led_red_gpio_set(int set)
 	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_RDY1), set);
 
 	return 0;
+}
+
+void mxs_wow_irq_enable(void)
+{
+	unsigned int irq = gpio_to_irq(MXS_PIN_TO_GPIO(PINID_ROTARYB));
+	struct irq_desc *desc = irq_to_desc(irq);
+
+	desc->chip->unmask(irq);
+	desc->status &= ~IRQ_MASKED;
 }

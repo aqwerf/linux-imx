@@ -1373,6 +1373,7 @@ static int __init mxs_mmc_probe(struct platform_device *pdev)
 	mmc->caps = mmc_data->caps;
 	mmc->caps |= MMC_CAP_SD_HIGHSPEED | MMC_CAP_MMC_HIGHSPEED;
 	mmc->caps |= MMC_CAP_SDIO_IRQ;
+	mmc->pm_caps = MMC_PM_KEEP_POWER | MMC_PM_WAKE_SDIO_IRQ;
 
 	/* Maximum block count requests. */
 	mmc->max_blk_size = 512;
