@@ -19,6 +19,9 @@ static int __initdata mount_initrd = 1;
 static int __init no_initrd(char *str)
 {
 	mount_initrd = 0;
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	initrd_start = initrd_end = 0;
+#endif
 	return 1;
 }
 
