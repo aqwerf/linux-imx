@@ -18,7 +18,11 @@
 
 #define DDI_BC_MAX_RESTART_CYCLES 100
 
+#ifdef CONFIG_MACH_MX23_CANOPUS
+#define DDI_BC_LIION_CHARGING_VOLTAGE  4150
+#else
 #define DDI_BC_LIION_CHARGING_VOLTAGE  4200
+#endif
 #define DDI_BC_ALKALINE_NIMH_CHARGING_VOLTAGE 1750
 
 /* brief Defines battery charger states. */
@@ -37,8 +41,15 @@ typedef enum _ddi_bc_State {
 	DDI_BC_STATE_CHARGING = 5,
 	/* brief TBD */
 	DDI_BC_STATE_TOPPING_OFF = 6,
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	/* brief TBD */
+	DDI_BC_STATE_TOPPING_OFF_COMPLETE = 7,
+	/* brief TBD */
+	DDI_BC_STATE_DCDC_MODE_WAITING_TO_CHARGE = 8,
+#else
 	/* brief TBD */
 	DDI_BC_STATE_DCDC_MODE_WAITING_TO_CHARGE = 7,
+#endif
 
 } ddi_bc_State_t;
 

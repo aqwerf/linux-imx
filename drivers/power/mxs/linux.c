@@ -304,8 +304,10 @@ static int mxs_bat_charging_status(void)
 			POWER_SUPPLY_STATUS_NOT_CHARGING :
 			POWER_SUPPLY_STATUS_DISCHARGING;
 		break;
+	case DDI_BC_STATE_TOPPING_OFF_COMPLETE:
+		ret = POWER_SUPPLY_STATUS_FULL;
+		break;
 	default:
-		/* TODO: detect full */
 		ret = POWER_SUPPLY_STATUS_NOT_CHARGING;
 		break;
 	}
@@ -725,14 +727,7 @@ static void check_and_handle_5v_connection(struct mxs_info *info)
 #endif
 			}
 		}
-#ifdef CONFIG_MACH_MX23_CANOPUS
-		else {
-			if (_main_state == MXS_EVENT_CHARGING &&
-					mxs_bat_charging_status() ==
-					POWER_SUPPLY_STATUS_DISCHARGING)
-				_change_state(MXS_EVENT_FULL_CHARGED);
-		}
-#endif
+
 		break;
 
 	case new_5v_disconnection:
@@ -892,8 +887,12 @@ static int mxs_bat_get_property(struct power_supply *psy,
 				POWER_SUPPLY_STATUS_NOT_CHARGING :
 			POWER_SUPPLY_STATUS_DISCHARGING;
 			break;
+#ifdef CONFIG_MACH_MX23_CANOPUS
+		case DDI_BC_STATE_TOPPING_OFF_COMPLETE:
+			val->intval = POWER_SUPPLY_STATUS_FULL;
+			break;
+#endif
 		default:
-			/* TODO: detect full */
 			val->intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
 			break;
 		}
@@ -902,6 +901,9 @@ static int mxs_bat_get_property(struct power_supply *psy,
 		/* is battery present */
 		state = ddi_bc_GetState();
 		switch (state) {
+#ifdef CONFIG_MACH_MX23_CANOPUS
+		case DDI_BC_STATE_TOPPING_OFF_COMPLETE:
+#endif
 		case DDI_BC_STATE_WAITING_TO_CHARGE:
 		case DDI_BC_STATE_DCDC_MODE_WAITING_TO_CHARGE:
 		case DDI_BC_STATE_CONDITIONING:
@@ -1000,13 +1002,18 @@ static void state_machine_work(struct work_struct *work)
 
 #ifdef CONFIG_MACH_MX23_CANOPUS
 	int ret = mxs_bat_health_status();
-	if (ret > POWER_SUPPLY_HEALTH_GOOD) {
-		if (ret == POWER_SUPPLY_HEALTH_DEAD)
+	if (info->sm_5v_connection_status == _5v_connected_verified) {
+		if (ret > POWER_SUPPLY_HEALTH_GOOD) {
+			if (ret == POWER_SUPPLY_HEALTH_DEAD)
+				_change_state(MXS_EVENT_FULL_CHARGED);
+			else if (ddi_power_GetBattery() >=
+					DDI_BC_LIION_CHARGING_VOLTAGE)
+				_change_state(MXS_EVENT_FULL_CHARGED);
+			else
+				_change_state(MXS_EVENT_FAULT);
+		} else if (mxs_bat_charging_status() ==
+				POWER_SUPPLY_STATUS_FULL)
 			_change_state(MXS_EVENT_FULL_CHARGED);
-		else if (ddi_power_GetBattery() * 1000 > 4200000)
-			_change_state(MXS_EVENT_FULL_CHARGED);
-		else
-			_change_state(MXS_EVENT_FAULT);
 	}
 #endif
 

@@ -69,7 +69,11 @@ ddi_bc_Uninitialized,
 	    ddi_bc_Disabled,
 	    ddi_bc_WaitingToCharge,
 	    ddi_bc_Conditioning,
-	    ddi_bc_Charging, ddi_bc_ToppingOff};
+	    ddi_bc_Charging, ddi_bc_ToppingOff,
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	    ddi_bc_WaitingToCharge,
+#endif
+};
 
 /* Used by states that need to watch the time. */
 uint32_t g_ddi_bc_u32StateTimer;
@@ -454,8 +458,13 @@ static ddi_bc_Status_t ddi_bc_WaitingToCharge(void)
 
 		x = u16BatteryVoltage + (u16BatteryVoltage / 20);
 
-		if (x >= g_ddi_bc_Configuration.u16ChargingVoltage)
+		if (x >= g_ddi_bc_Configuration.u16ChargingVoltage) {
+#ifdef CONFIG_MACH_MX23_CANOPUS
+			if (g_ddi_bc_State != DDI_BC_STATE_TOPPING_OFF_COMPLETE)
+				TransitionToToppingOff();
+#endif
 			return DDI_BC_STATUS_SUCCESS;
+		}
 
 	}
 
@@ -895,6 +904,10 @@ static ddi_bc_Status_t ddi_bc_ToppingOff(void)
 		/* ---------------------------------------------------------------------- */
 
 		TransitionToWaitingToCharge();
+
+#ifdef CONFIG_MACH_MX23_CANOPUS
+		g_ddi_bc_State = DDI_BC_STATE_TOPPING_OFF_COMPLETE;
+#endif
 
 	}
 	/* -------------------------------------------------------------------------- */
