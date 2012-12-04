@@ -221,7 +221,6 @@ static inline int rtc_does_wakealarm(struct rtc_device *rtc)
 	return rtc->ops->set_alarm != NULL;
 }
 
-
 void rtc_sysfs_add_device(struct rtc_device *rtc)
 {
 	int err;
@@ -234,6 +233,12 @@ void rtc_sysfs_add_device(struct rtc_device *rtc)
 	if (err)
 		dev_err(rtc->dev.parent,
 			"failed to create alarm attribute, %d\n", err);
+#ifdef CONFIG_RTC_WAKERS
+	err = wakers_register(rtc);
+	if (err)
+		dev_err(rtc->dev.parent,
+			"failed to create alarm attribute, %d\n", err);
+#endif
 }
 
 void rtc_sysfs_del_device(struct rtc_device *rtc)
@@ -241,6 +246,10 @@ void rtc_sysfs_del_device(struct rtc_device *rtc)
 	/* REVISIT did we add it successfully? */
 	if (rtc_does_wakealarm(rtc))
 		device_remove_file(&rtc->dev, &dev_attr_wakealarm);
+#ifdef CONFIG_RTC_WAKERS
+	if (rtc_does_wakealarm(rtc))
+		wakers_unregister(rtc);
+#endif
 }
 
 void __init rtc_sysfs_init(struct class *rtc_class)

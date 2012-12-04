@@ -105,6 +105,7 @@ static int mxs_rtc_open(struct device *pdev)
 	int r;
 	struct mxs_rtc_data *rtc_data = dev_get_drvdata(pdev);
 
+#ifndef CONFIG_RTC_WAKERS
 	r = request_irq(rtc_data->irq_alarm, mxs_rtc_interrupt,
 			IRQF_DISABLED, "RTC alarm", pdev);
 	if (r) {
@@ -123,16 +124,21 @@ fail_2:
 	free_irq(rtc_data->irq_alarm, pdev);
 fail_1:
 	return r;
+#else
+	return 0;
+#endif
 }
 
 static void mxs_rtc_release(struct device *pdev)
 {
 	struct mxs_rtc_data *rtc_data = dev_get_drvdata(pdev);
 
+#ifndef CONFIG_RTC_WAKERS
 	__raw_writel(BM_RTC_CTRL_ALARM_IRQ_EN | BM_RTC_CTRL_ONEMSEC_IRQ_EN,
 		rtc_data->base + HW_RTC_CTRL_CLR);
 	free_irq(rtc_data->irq_alarm, pdev);
 	free_irq(rtc_data->irq_sample, pdev);
+#endif
 }
 
 static int mxs_rtc_ioctl(struct device *pdev, unsigned int cmd,
@@ -207,6 +213,7 @@ static int mxs_rtc_probe(struct platform_device *pdev)
 	u32 rtc_stat;
 	struct resource *res;
 	struct mxs_rtc_data *rtc_data;
+	int r;
 
 	rtc_data = kzalloc(sizeof(*rtc_data), GFP_KERNEL);
 
@@ -246,6 +253,8 @@ static int mxs_rtc_probe(struct platform_device *pdev)
 	       (hwversion >> 16) & 0xFF,
 	       hwversion & 0xFFFF);
 
+	device_init_wakeup(&pdev->dev, 1);
+
 	rtc_data->rtc = rtc_device_register(pdev->name, &pdev->dev,
 				&mxs_rtc_ops, THIS_MODULE);
 	if (IS_ERR(rtc_data->rtc)) {
@@ -253,11 +262,33 @@ static int mxs_rtc_probe(struct platform_device *pdev)
 		return PTR_ERR(rtc_data->rtc);
 	}
 
+	r = request_irq(rtc_data->irq_alarm, mxs_rtc_interrupt,
+			IRQF_DISABLED, "RTC alarm", &pdev->dev);
+	if (r) {
+		dev_err(&pdev->dev, "Cannot claim IRQ%d\n",
+				rtc_data->irq_alarm);
+		goto out_irq_alarm;
+	}
+	r = request_irq(rtc_data->irq_sample, mxs_rtc_interrupt,
+			IRQF_DISABLED, "RTC tick", &pdev->dev);
+	if (r) {
+		dev_err(&pdev->dev, "Cannot claim IRQ%d\n",
+				rtc_data->irq_sample);
+		goto out_irq_sample;
+	}
 	platform_set_drvdata(pdev, rtc_data);
 
-	device_init_wakeup(&pdev->dev, 1);
-
 	return 0;
+
+out_irq_sample:
+	free_irq(rtc_data->irq_alarm, &pdev->dev);
+out_irq_alarm:
+	__raw_writel(BM_RTC_CTRL_ONEMSEC_IRQ_EN | BM_RTC_CTRL_ALARM_IRQ_EN,
+			rtc_data->base + HW_RTC_CTRL);
+	rtc_device_unregister(rtc_data->rtc);
+	kfree(rtc_data);
+
+	return r;
 }
 
 static int mxs_rtc_remove(struct platform_device *dev)
@@ -275,6 +306,18 @@ static int mxs_rtc_remove(struct platform_device *dev)
 #ifdef CONFIG_PM
 static int mxs_rtc_suspend(struct platform_device *dev, pm_message_t state)
 {
+#ifdef CONFIG_RTC_WAKERS
+	struct mxs_rtc_data *rtc_data = platform_get_drvdata(dev);
+
+	if (wakers_set_alarm(rtc_data->rtc)) {
+		__raw_writel(BM_RTC_PERSISTENT0_ALARM_EN |
+				BM_RTC_PERSISTENT0_ALARM_WAKE_EN,
+				rtc_data->base + HW_RTC_PERSISTENT0_SET);
+
+		__raw_writel(BM_RTC_CTRL_ALARM_IRQ_EN,
+				rtc_data->base + HW_RTC_CTRL_SET);
+	}
+#endif
 	return 0;
 }
 
