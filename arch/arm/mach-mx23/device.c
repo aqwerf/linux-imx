@@ -821,17 +821,13 @@ static ddi_bc_Cfg_t battery_data = {
 	.u16ConditioningCurrent		 = 60,		/* mA */
 	.u32ConditioningTimeout		 = 4*60*60*1000, /* ms (4 hours) */
 #ifdef CONFIG_MACH_MX23_CANOPUS
-	.u16ChargingVoltage		 = 4150,	/* mV */
+	.u16ChargingVoltage		 = 4100,	/* mV */
 #else
 	.u16ChargingVoltage		 = 4200,	/* mV */
 #endif
 	/* FIXME: the current comparator could have h/w bugs in current
 	 * detection through POWER_STS.CHRGSTS bit */
-#ifdef CONFIG_MACH_MX23_CANOPUS
-	.u16ChargingCurrent		 = 350,		/* mA 350 */
-#else
 	.u16ChargingCurrent		 = 600,		/* mA 600 */
-#endif
 	.u16ChargingThresholdCurrent	 = 60,		/* mA 60 */
 	.u32ChargingTimeout		 = 4*60*60*1000,/* ms (4 hours) */
 #ifdef CONFIG_MACH_MX23_CANOPUS
