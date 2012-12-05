@@ -71,6 +71,15 @@ config RTC_INTF_SYSFS
 
 	  If unsure, say Y.
 
+config RTC_WAKERS
+	bool "Suspend wakers"
+	depends on RTC_INTF_SYSFS
+	default y
+	help
+	  Add/remove wakers at suspend state.
+	  Write "wakername second" to /sys/class/rtc/rtc0/waker for adding.
+	  Write "wakername" to /sys/class/rtc/rtc0/waker for removing.
+
 config RTC_INTF_PROC
 	boolean "/proc/driver/rtc (procfs for rtc0)"
 	depends on PROC_FS

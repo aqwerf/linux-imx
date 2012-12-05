@@ -244,6 +244,12 @@ extern int rtc_hctosys_ret;
 #define rtc_hctosys_ret -ENODEV
 #endif
 
+#ifdef CONFIG_RTC_WAKERS
+extern int wakers_register(struct rtc_device *rtc);
+extern void wakers_unregister(struct rtc_device *rtc);
+extern int wakers_set_alarm(struct rtc_device *rtc);
+#endif
+
 #endif /* __KERNEL__ */
 
 #endif /* _LINUX_RTC_H_ */

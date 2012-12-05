@@ -32,6 +32,9 @@
 #include <mach/regs-lradc.h>
 #include <mach/lradc.h>
 #include <mach/regs-power.h>
+#ifdef CONFIG_HAS_WAKELOCK
+#include <linux/wakelock.h>
+#endif
 
 #define BUTTON_PRESS_THRESHOLD  3300
 #define LRADC_NOISE_MARGIN      200
@@ -65,6 +68,10 @@ static int delay2 = 200;
 
 static int mxskbd_open(struct input_dev *dev);
 static void mxskbd_close(struct input_dev *dev);
+
+#ifdef CONFIG_HAS_WAKELOCK
+static struct wake_lock key_wake_lock;
+#endif
 
 #ifdef ENABLE_BACKLIGHT_GPIO_CONTROL
 static struct timer_list _bl_timer;
@@ -250,6 +257,9 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 #ifdef ENABLE_BACKLIGHT_GPIO_CONTROL
 				_keypad_set_backlight(1);
 #endif
+#ifdef CONFIG_HAS_WAKELOCK
+				wake_lock_timeout(&key_wake_lock, 5*HZ);
+#endif
 			} else if (last_button != btn) {
 				input_report_key(GET_INPUT_DEV(devdata),
 						last_button, 0);
@@ -279,6 +289,9 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 							KEY_END, !0);
 #ifdef ENABLE_BACKLIGHT_GPIO_CONTROL
 					_keypad_set_backlight(1);
+#endif
+#ifdef CONFIG_HAS_WAKELOCK
+					wake_lock_timeout(&key_wake_lock, 5*HZ);
 #endif
 				}
 
@@ -399,6 +412,10 @@ static int __devinit mxskbd_probe(struct platform_device *pdev)
 	if (plat_data == NULL)
 		return -ENODEV;
 
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_init(&key_wake_lock, WAKE_LOCK_SUSPEND, "mxs-keypad");
+#endif
+
 	/* Create and register the input driver. */
 	d = mxskbd_data_alloc(pdev, plat_data->keypair,
 			plat_data->keypair_offset);
@@ -488,12 +505,19 @@ err_free_irq1:
 err_free_dev:
 	mxskbd_data_free(d);
 err_out:
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_lock_destroy(&key_wake_lock);
+#endif
 	return err;
 }
 
 static int __devexit mxskbd_remove(struct platform_device *pdev)
 {
 	struct mxskbd_data *d = platform_get_drvdata(pdev);
+
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_lock_destroy(&key_wake_lock);
+#endif
 
 	hw_lradc_unuse_channel(d->chan1);
 	hw_lradc_unuse_channel(d->chan2);

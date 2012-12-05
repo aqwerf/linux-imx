@@ -73,6 +73,7 @@ struct mxs_lradc_plat_data {
 extern int mxs_charger_led_green_gpio_set(int set);
 extern int mxs_charger_led_red_gpio_set(int set);
 extern void mxs_wow_irq_enable(void);
+extern void mxs_key_irq_enable(void);
 #endif
 
 struct mxskbd_keypair {
