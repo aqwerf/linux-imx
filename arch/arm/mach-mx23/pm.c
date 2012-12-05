@@ -42,6 +42,7 @@
 #include <mach/regs-pwm.h>
 #include <mach/regs-rtc.h>
 #include <mach/../../regs-icoll.h>
+#include <mach/device.h>
 #include "regs-dram.h"
 
 #include "sleep.h"
@@ -281,6 +282,9 @@ static inline void do_standby(void)
 	}
 
 	local_fiq_disable();
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	mxs_wow_irq_enable();
+#endif
 	mxs_nomatch_suspend_timer();
 
 	__raw_writel(BM_POWER_CTRL_ENIRQ_PSWITCH,
