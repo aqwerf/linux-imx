@@ -35,8 +35,6 @@
 #include <mach/regs-pwm.h>
 #include <mach/system.h>
 
-#include "test-logo.h"
-
 /*_____________________ Constants Definitions _______________________________*/
 
 #define REGS_PWM_BASE IO_ADDRESS(PWM_PHYS_ADDR)
@@ -125,24 +123,6 @@ _lcd_panel_set_prepare(int x, int y)
 	_lcd_panel_pair_write(0x21, y & 0xff);
 
 	_lcd_panel_data_write(_CMD, 0x22);
-}
-
-/* FIXME: remove this */
-static void
-_lcd_panel_set_logo(int is_logo, int color)
-{
-	int i = _V_ACTIVE * _H_ACTIVE;
-	u16 *logo = NULL;
-
-	logo = (u16 *)&_test_logo[12];
-
-	while (i-- > 0) {
-		if (is_logo) {
-			_lcd_panel_pixel_write(*logo);
-			logo++;
-		} else
-			_lcd_panel_pixel_write(color);
-	}
 }
 
 static void
