@@ -302,11 +302,16 @@ _lcd_panel_power(int set, dma_addr_t phys)
 static void
 _lcdif_setup_system_panel(void)
 {
-	_lcdif_write(HW_LCDIF_CTRL_CLR,
-			BM_LCDIF_CTRL_CLKGATE |
-			BM_LCDIF_CTRL_SFTRST |
-			BM_LCDIF_CTRL_LCDIF_MASTER |
-			BM_LCDIF_CTRL_BYPASS_COUNT);
+	_lcdif_write(HW_LCDIF_CTRL_CLR, BM_LCDIF_CTRL_CLKGATE);
+	_lcdif_write(HW_LCDIF_CTRL_SET, BM_LCDIF_CTRL_SFTRST);
+	udelay(10);
+	_lcdif_write(HW_LCDIF_CTRL_CLR, BM_LCDIF_CTRL_CLKGATE |
+		     BM_LCDIF_CTRL_SFTRST |
+		     BM_LCDIF_CTRL_LCDIF_MASTER |
+		     BM_LCDIF_CTRL_BYPASS_COUNT);
+
+	_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_MODE86 |
+		     BM_LCDIF_CTRL1_BUSY_ENABLE);
 
 	_lcdif_write(HW_LCDIF_VDCTRL0_CLR,
 			BM_LCDIF_VDCTRL0_VSYNC_OEB);
@@ -352,45 +357,30 @@ _lcdif_dma_init(struct device *dev, dma_addr_t phys, int memsize)
 	return 0;
 }
 
-static void
-_lcdif_dma_release(void)
-{
-	_lcdif_write(HW_LCDIF_CTRL_CLR, BM_LCDIF_CTRL_LCDIF_MASTER);
-
-	return;
-}
-
 static int
 _lcdif_init_panel(struct device *dev, dma_addr_t phys, int memsize,
 		struct mxs_platform_fb_entry *pentry)
 {
-	int ret = 0;
-
 	_lcd_clk = clk_get(NULL, "lcdif");
-	if (IS_ERR(_lcd_clk)) {
-		ret = PTR_ERR(_lcd_clk);
-		goto out;
-	}
+	if (IS_ERR(_lcd_clk))
+		return -1;
 
-	ret = clk_enable(_lcd_clk);
-	if (ret) {
+	if (clk_enable(_lcd_clk) != 0) {
 		clk_put(_lcd_clk);
-		goto out;
+		return -1;
 	}
 
-	ret = clk_set_rate(_lcd_clk, 1000000000 / pentry->cycle_time_ns);
-	if (ret) {
+	if (clk_set_rate(_lcd_clk, 1000000000 / pentry->cycle_time_ns) != 0) {
 		clk_disable(_lcd_clk);
 		clk_put(_lcd_clk);
-		goto out;
+		return -1;
 	}
 
+	_lcdif_setup_system_panel();
+	_lcdif_write(HW_LCDIF_CUR_BUF, phys);
+	atomic_set(&_init_panel, 1);
+
 	if (_init_temp) {
-		/* for host lcdif */
-		_lcdif_setup_system_panel();
-
-		atomic_set(&_init_panel, 1);
-
 		/* for external LCD reset */
 		_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_RESET);
 		mdelay(10);
@@ -399,40 +389,28 @@ _lcdif_init_panel(struct device *dev, dma_addr_t phys, int memsize,
 		
 		/* for external LCD */
 		_lcd_panel_init(_LCD_BYD);
-		_lcd_panel_set_prepare(0, 0);
 
-		ret = _lcdif_dma_init(dev, phys, memsize);
-		if (ret)
-			goto out;
+		ili9225b_lcdif_dma_send(phys);
 	}
 
 	mxs_lcd_set_bl_pdata(pentry->bl_data);
 	mxs_lcdif_notify_clients(MXS_LCDIF_PANEL_INIT, pentry);
 
 	_init_temp = 1;
-
 	return 0;
-
-out:
-	return ret;
 }
 
 static void
 _lcdif_release_panel(struct device *dev,
 			  struct mxs_platform_fb_entry *pentry)
 {
-	/* Reset LCD panel signel. */
-	_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_RESET);	/* low */
-	mdelay(100);
-
-	mxs_lcdif_notify_clients(MXS_LCDIF_PANEL_RELEASE, pentry);
-	
-	_lcdif_dma_release();
+	_lcdif_write(HW_LCDIF_CTRL_CLR, BM_LCDIF_CTRL_LCDIF_MASTER);
+	_lcdif_write(HW_LCDIF_CTRL_SET, BM_LCDIF_CTRL_CLKGATE);
 	
 	clk_disable(_lcd_clk);
 	clk_put(_lcd_clk);
 
-	_lcdif_write(HW_LCDIF_CTRL_SET, BM_LCDIF_CTRL_CLKGATE);
+	mxs_lcdif_notify_clients(MXS_LCDIF_PANEL_RELEASE, pentry);
 }
 
 static int
@@ -461,28 +439,13 @@ _lcdif_blank_panel(int blank)
 static void
 _lcdif_run_panel(void)
 {
-	_lcdif_write(HW_LCDIF_CTRL1_SET, BM_LCDIF_CTRL1_CUR_FRAME_DONE_IRQ_EN);
-
-	_lcdif_write(HW_LCDIF_CTRL_CLR, BM_LCDIF_CTRL_RUN);
-	_lcdif_write(HW_LCDIF_CTRL_SET, BM_LCDIF_CTRL_DATA_SELECT);
-	
-	_lcdif_write(HW_LCDIF_TRANSFER_COUNT,
-			BF_LCDIF_TRANSFER_COUNT_V_COUNT(_V_ACTIVE) |
-			BF_LCDIF_TRANSFER_COUNT_H_COUNT(_H_ACTIVE));
-	
-	_lcdif_write(HW_LCDIF_CTRL_SET, BM_LCDIF_CTRL_LCDIF_MASTER);
-
-	_lcdif_write(HW_LCDIF_CTRL_SET, BM_LCDIF_CTRL_RUN);
+	/* do nothing */
 }
 
 static void
 _lcdif_stop_panel(void)
 {
-	_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_CUR_FRAME_DONE_IRQ_EN);
-
-	_lcdif_write(HW_LCDIF_CTRL_CLR, BM_LCDIF_CTRL_RUN);
-
-	_lcdif_write(HW_LCDIF_CTRL_CLR, BM_LCDIF_CTRL_LCDIF_MASTER);
+	/* do nothing */
 }
 
 static int
@@ -624,8 +587,8 @@ _bl_set_intensity(struct mxs_platform_bl_data *data,
 
 static struct mxs_platform_bl_data _bl_data = {
 	.bl_max_intensity = 100,
-	.bl_default_intensity = 80,
-	.bl_cons_intensity = 80,
+	.bl_default_intensity = 100,
+	.bl_cons_intensity = 100,
 	.init_bl = _bl_init,
 	.free_bl = _bl_free,
 	.set_bl_intensity = _bl_set_intensity,
