@@ -35,6 +35,8 @@
 #include <mach/regs-pwm.h>
 #include <mach/system.h>
 
+#include "loading.h"
+
 /*_____________________ Constants Definitions _______________________________*/
 
 #define REGS_PWM_BASE IO_ADDRESS(PWM_PHYS_ADDR)
@@ -75,6 +77,108 @@ static int _bl_power[] = {
 /*_____________________ Local Declarations __________________________________*/
 
 /*_____________________ internal functions __________________________________*/
+
+static void _lcd_panel_set_prepare(int x, int y);
+
+static void
+_lcd_panel_multi_write(int w, unsigned short * p)
+{
+	int i;
+	_lcdif_write(HW_LCDIF_CTRL1_CLR,
+		     BM_LCDIF_CTRL1_BYTE_PACKING_FORMAT);
+	_lcdif_write(HW_LCDIF_CTRL1_SET,
+		     BF_LCDIF_CTRL1_BYTE_PACKING_FORMAT(0x3));
+	
+	_lcdif_write(HW_LCDIF_CTRL_CLR,
+		     BM_LCDIF_CTRL_LCDIF_MASTER |
+		     BM_LCDIF_CTRL_RUN);
+	
+	_lcdif_write(HW_LCDIF_TRANSFER_COUNT,
+		     BF_LCDIF_TRANSFER_COUNT_V_COUNT(1) |
+		     BF_LCDIF_TRANSFER_COUNT_H_COUNT(w));
+
+	_lcdif_write(HW_LCDIF_CTRL_SET, BM_LCDIF_CTRL_DATA_SELECT);
+
+	_lcdif_write(HW_LCDIF_CTRL_SET, BM_LCDIF_CTRL_RUN);
+
+	for (i = 0; i < w; i++) {
+		while (_lcdif_read(HW_LCDIF_STAT) & BM_LCDIF_STAT_LFIFO_FULL);
+		_lcdif_write(HW_LCDIF_DATA, *p++);
+	}
+
+	while (_lcdif_read(HW_LCDIF_CTRL) & BM_LCDIF_CTRL_RUN);
+
+	_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_CUR_FRAME_DONE_IRQ);
+}
+
+static struct timer_list _timer;
+static int _loading;
+
+static void _draw_loading_handler(unsigned long data)
+{
+	static int pos;
+	unsigned short *p;
+	
+	int x = 176 / 2 - 32 / 2;
+	int y = 150;
+	int ye = y + 32;
+
+	p = loading[pos];
+	for (; y < ye; y++) {
+		_lcd_panel_set_prepare(x, y);
+		_lcd_panel_multi_write(32, p);
+		p += 32;
+	}
+	if (++pos >= 8)
+		pos = 0;
+
+	del_timer(&_timer);
+	if (_loading) {
+		_timer.expires = jiffies + msecs_to_jiffies(100);
+		add_timer(&_timer);
+	}
+}
+
+static int splash_show(struct device *dev,
+		       struct device_attribute *attr, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "%d\n", _loading);
+}
+
+static int splash_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t len)
+{
+	if (len < 1)
+		return -EINVAL;
+
+	if (strnicmp(buf, "off", 3) == 0 || strnicmp(buf, "0", 1) == 0) {
+		if (_loading) {
+			_loading = 0;
+			del_timer(&_timer);
+		}
+	} else {
+		return -EINVAL;
+	}
+
+	return len;
+}
+
+static DEVICE_ATTR(splash, 0644,
+		   splash_show,
+		   splash_store);
+
+static void _loading_icon_start(void)
+{
+	_loading = 1;
+	struct platform_device *pdev;
+	pdev = mxs_get_device("mxs-fb", 0);
+	device_create_file(&(pdev->dev), &dev_attr_splash);
+	
+	init_timer(&_timer);
+	_timer.function = _draw_loading_handler;
+	_timer.expires = jiffies + msecs_to_jiffies(100);
+	add_timer(&_timer);
+}
 
 static void
 _lcd_panel_data_write(int is_cmd, int data)
@@ -391,6 +495,8 @@ _lcdif_init_panel(struct device *dev, dma_addr_t phys, int memsize,
 		_lcd_panel_init(_LCD_BYD);
 
 		ili9225b_lcdif_dma_send(phys);
+	} else {
+		_loading_icon_start();
 	}
 
 	mxs_lcd_set_bl_pdata(pentry->bl_data);
