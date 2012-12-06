@@ -83,8 +83,10 @@ static void mxsfb_enable_controller(struct mxs_fb_data *data)
 	if (!data || !data->pdata || !data->pdata->cur)
 		return;
 
+#if !defined(CONFIG_FB_MXS_LCD_ILI9225B)
 	mxs_init_lcdif();
 	init_timings(data);
+#endif
 	pentry->init_panel(data->dev, data->phys_start,
 			   data->info.fix.smem_len, data->pdata->cur);
 	pentry->run_panel();
@@ -613,6 +615,7 @@ static struct fb_ops mxsfb_ops = {
 	.fb_imageblit = cfb_imageblit,
 };
 
+#if !defined(CONFIG_FB_MXS_LCD_ILI9225B)
 static void init_timings(struct mxs_fb_data *data)
 {
 	unsigned phase_time;
@@ -627,6 +630,7 @@ static void init_timings(struct mxs_fb_data *data)
 	timings |= timings << 16;
 	__raw_writel(timings, data->regbase + HW_LCDIF_TIMING);
 }
+#endif
 
 #ifdef CONFIG_CPU_FREQ
 
@@ -866,7 +870,9 @@ static int __devinit mxsfb_probe(struct platform_device *pdev)
 
 	mxsfb_set_par(info);
 
+#if !defined(CONFIG_FB_MXS_LCD_ILI9225B)
 	mxs_init_lcdif();
+#endif
 	ret = pentry->init_panel(data->dev, data->phys_start,
 				 mxsfb_fix.smem_len, pentry);
 	if (ret) {
@@ -874,7 +880,9 @@ static int __devinit mxsfb_probe(struct platform_device *pdev)
 		goto out_panel;
 	}
 	dev_dbg(&pdev->dev, "LCD panel initialized\n");
+#if !defined(CONFIG_FB_MXS_LCD_ILI9225B)
 	init_timings(data);
+#endif
 
 	ret = request_irq(data->irq, lcd_irq_handler, 0, "fb_irq", data);
 	if (ret) {
@@ -894,9 +902,11 @@ static int __devinit mxsfb_probe(struct platform_device *pdev)
 	}
 #endif
 	pentry->run_panel();
+#if !defined(CONFIG_FB_MXS_LCD_ILI9225B)
 	/* REVISIT: temporary workaround for MX23EVK */
 	mxsfb_disable_controller(data);
 	mxsfb_enable_controller(data);
+#endif
 	data->cur_phys = data->phys_start;
 	dev_dbg(&pdev->dev, "LCD running now\n");
 
