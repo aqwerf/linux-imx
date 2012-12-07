@@ -616,6 +616,10 @@ void init_protection(struct mxs_info *info)
 		ddi_power_EnableBatteryBoInterrupt(false);
 
 		info->sm_5v_connection_status = _5v_connected_verified;
+
+#ifdef CONFIG_MACH_MX23_CANOPUS
+		_change_state(MXS_EVENT_CHARGING);
+#endif
 	} else {
 #ifdef DEBUG_IRQS
 		if (battery_voltage <
