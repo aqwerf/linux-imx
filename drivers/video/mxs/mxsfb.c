@@ -41,6 +41,11 @@
 #include <mach/regs-lcdif.h>
 #include <mach/clock.h>
 #include <mach/lcdif.h>
+#ifdef CONFIG_HAS_WAKELOCK
+#include <linux/wakelock.h>
+
+static struct wake_lock _lcd_wake_lock;
+#endif
 
 #define NUM_SCREENS	1
 
@@ -692,6 +697,19 @@ static int get_max_memsize(struct mxs_platform_fb_entry *pentry,
 #if defined(CONFIG_FB_MXS_LCD_ILI9225B)
 static int lcd_power = 1;
 
+static void mxsfb_lcd_power(int to)
+{
+	lcd_power = to;
+
+	ili9225b_lcd_panel_power(to, cdata->phys_start);
+
+#ifdef CONFIG_HAS_WAKELOCK
+	if (to)
+		wake_lock(&_lcd_wake_lock);
+	else
+		wake_unlock(&_lcd_wake_lock);
+#endif
+}
 /* sysfs export of baclight control */
 static int mxsfb_lcd_power_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -707,10 +725,10 @@ static int mxsfb_lcd_power_store(struct device *dev,
 
 	if (strnicmp(buf, "on", 2) == 0 ||
 			strnicmp(buf, "1", 1) == 0) {
-		ili9225b_lcd_panel_power(1, cdata->phys_start);
+		mxsfb_lcd_power(1);
 	} else if (strnicmp(buf, "off", 3) == 0 ||
 			strnicmp(buf, "0", 1) == 0) {
-		ili9225b_lcd_panel_power(0, cdata->phys_start);
+		mxsfb_lcd_power(0);
 	} else {
 		return -EINVAL;
 	}
@@ -982,11 +1000,17 @@ static struct platform_driver mxsfb_driver = {
 
 static int __init mxsfb_init(void)
 {
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_init(&_lcd_wake_lock, WAKE_LOCK_SUSPEND, "mxs-lcd");
+#endif
 	return platform_driver_register(&mxsfb_driver);
 }
 
 static void __exit mxsfb_exit(void)
 {
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_destroy(&_lcd_wake_lock);
+#endif
 	platform_driver_unregister(&mxsfb_driver);
 }
 
