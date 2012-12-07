@@ -105,7 +105,7 @@ _lcd_panel_multi_write(int w, unsigned short * p)
 
 	for (i = 0; i < w; i++) {
 		while (_lcdif_read(HW_LCDIF_STAT) & BM_LCDIF_STAT_LFIFO_FULL);
-		_lcdif_write(HW_LCDIF_DATA, *p++);
+		_lcdif_write(HW_LCDIF_DATA, p ? *p++ : 0);
 	}
 
 	while (_lcdif_read(HW_LCDIF_CTRL) & BM_LCDIF_CTRL_RUN);
@@ -128,7 +128,7 @@ static void _draw_loading_handler(unsigned long data)
 	p = loading[pos];
 	for (; y < ye; y++) {
 		_lcd_panel_set_prepare(x, y);
-		_lcd_panel_multi_write(32, p);
+		_lcd_panel_multi_write(32, (data == 0x1000) ? NULL : p);
 		p += 32;
 	}
 	if (++pos >= 8)
@@ -157,6 +157,7 @@ static int splash_store(struct device *dev,
 		if (_loading) {
 			_loading = 0;
 			del_timer(&_timer);
+			_draw_loading_handler(0x1000);
 		}
 	} else {
 		return -EINVAL;
