@@ -818,7 +818,11 @@ static ddi_bc_Cfg_t battery_data = {
 	.u16CurrentRampSlope		 = 75,		/* mA/s */
 	.u16ConditioningThresholdVoltage = 2900, 	/* mV */
 	.u16ConditioningMaxVoltage	 = 3000,	/* mV */
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	.u16ConditioningCurrent		 = 30,		/* mA */
+#else
 	.u16ConditioningCurrent		 = 60,		/* mA */
+#endif
 	.u32ConditioningTimeout		 = 4*60*60*1000, /* ms (4 hours) */
 #ifdef CONFIG_MACH_MX23_CANOPUS
 	.u16ChargingVoltage		 = 4100,	/* mV */
@@ -827,8 +831,13 @@ static ddi_bc_Cfg_t battery_data = {
 #endif
 	/* FIXME: the current comparator could have h/w bugs in current
 	 * detection through POWER_STS.CHRGSTS bit */
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	.u16ChargingCurrent		 = 500,		/* mA 500 */
+	.u16ChargingThresholdCurrent	 = 50,		/* mA 50 */
+#else
 	.u16ChargingCurrent		 = 600,		/* mA 600 */
 	.u16ChargingThresholdCurrent	 = 60,		/* mA 60 */
+#endif
 	.u32ChargingTimeout		 = 4*60*60*1000,/* ms (4 hours) */
 #ifdef CONFIG_MACH_MX23_CANOPUS
 	.u32TopOffPeriod		 = 1*60*1000,	/* ms (1 minutes) */
