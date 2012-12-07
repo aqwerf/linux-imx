@@ -574,7 +574,7 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.voltage	= PAD_3_3V,
 		.drive		= 1,
 		.output		= 1,
-		.data		= 0,
+		.data		= 1,
 	},
 	/* Interrupt Input Siganl for Key Pressing */
 	{
@@ -680,6 +680,13 @@ void __init mx23_canopus_pins_init(void)
 int mxs_key_backlight_gpio_set(int set)
 {
 	gpio_set_value(MXS_PIN_TO_GPIO(PINID_PWM4), set);
+
+	return 0;
+}
+
+int mxs_audio_receiver_amp_gpio_set(int set)
+{
+	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_D09), set);
 
 	return 0;
 }

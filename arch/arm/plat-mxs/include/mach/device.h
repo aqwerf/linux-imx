@@ -72,6 +72,7 @@ struct mxs_lradc_plat_data {
 #ifdef CONFIG_MACH_MX23_CANOPUS
 extern int mxs_charger_led_green_gpio_set(int set);
 extern int mxs_charger_led_red_gpio_set(int set);
+extern int mxs_audio_receiver_amp_gpio_set(int set);
 extern void mxs_wow_irq_enable(void);
 extern void mxs_key_irq_enable(void);
 #endif
