@@ -3259,7 +3259,13 @@ static struct platform_driver udc_driver = {
 static int __init udc_init(void)
 {
 	printk(KERN_INFO "%s (%s)\n", driver_desc, DRIVER_VERSION);
-	return platform_driver_register(&udc_driver);
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	/* FIXME: patch for use kernel image for nfs & standalone */
+	if (strstr(boot_command_line, "nfsroot") == NULL)
+		return 0;
+	else
+#endif
+		return platform_driver_register(&udc_driver);
 }
 #ifdef CONFIG_MXS_VBUS_CURRENT_DRAW
 	fs_initcall(udc_init);
