@@ -36,6 +36,11 @@
 #include <linux/uaccess.h>
 #include <linux/circ_buf.h>
 #include <mach/device.h>
+#ifdef CONFIG_HAS_WAKELOCK
+#include <linux/wakelock.h>
+
+static struct wake_lock _charger_wake_lock;
+#endif
 
 enum application_5v_status{
 	_5v_connected_verified,
@@ -1231,7 +1236,9 @@ static irqreturn_t mxs_irq_vdd5v(int irq, void *cookie)
 	switch (ddi_power_GetPmu5vStatus()) {
 
 	case new_5v_connection:
-
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_lock(&_charger_wake_lock);
+#endif
 		ddi_power_disable_5v_connection_irq();
 		dev_dbg(info->dev, "new 5v connection detected\n");
 		info->sm_new_5v_connection_jiffies = jiffies;
@@ -1239,7 +1246,9 @@ static irqreturn_t mxs_irq_vdd5v(int irq, void *cookie)
 		break;
 
 	case new_5v_disconnection:
-
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_unlock(&_charger_wake_lock);
+#endif
 		/* due to 5v connect vddio bo chip bug, we need to
 		 * disable vddio interrupts until we reset the 5v
 		 * detection for 5v connect detect.  We want to allow
@@ -1787,11 +1796,17 @@ static int __init mxs_bat_init(void)
 	pll0 = clk_get(NULL, "ref_cpu");
 	clk_set_parent(cpu, pll0);
 #endif
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_init(&_charger_wake_lock, WAKE_LOCK_SUSPEND, "mxs-charger");
+#endif
 	return platform_driver_register(&mxs_batdrv);
 }
 
 static void __exit mxs_bat_exit(void)
 {
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_destroy(&_charger_wake_lock);
+#endif
 	platform_driver_unregister(&mxs_batdrv);
 }
 #ifdef CONFIG_MXS_VBUS_CURRENT_DRAW
