@@ -1168,5 +1168,12 @@ config RAMOOPS
 	  This enables panic and oops messages to be logged to a circular
 	  buffer in RAM where it can be read back at some later point.
 
+config CANOPUS_JACK
+	tristate "Headphone jack device driver"
+	depends on MACH_MX23_CANOPUS
+	default y
+	help
+	  Headphone jack detect simple device driver
+
 endmenu
 

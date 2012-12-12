@@ -684,6 +684,16 @@ int mxs_key_backlight_gpio_set(int set)
 	return 0;
 }
 
+int mxs_audio_jack_gpio_irq(void)
+{
+	return gpio_to_irq(MXS_PIN_TO_GPIO(PINID_LCD_DOTCK));
+}
+
+int mxs_audio_jack_gpio_get(void)
+{
+	return gpio_get_value(MXS_PIN_TO_GPIO(PINID_LCD_DOTCK));
+}
+
 int mxs_audio_receiver_amp_gpio_set(int set)
 {
 	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_D09), set);
