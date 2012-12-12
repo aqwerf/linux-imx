@@ -515,6 +515,10 @@ static void
 _lcdif_release_panel(struct device *dev,
 			  struct mxs_platform_fb_entry *pentry)
 {
+	/* Reset LCD panel signel. */
+	_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_RESET);	/* low */
+	mdelay(100);
+
 	_lcdif_write(HW_LCDIF_CTRL_CLR, BM_LCDIF_CTRL_LCDIF_MASTER);
 	_lcdif_write(HW_LCDIF_CTRL_SET, BM_LCDIF_CTRL_CLKGATE);
 	
