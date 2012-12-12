@@ -873,6 +873,8 @@ CONFIG_DEVKMEM=y
 # CONFIG_N_GSM is not set
 CONFIG_MXS_VIIM=y
 
+CONFIG_CANOPUS_JACK=y
+
 #
 # Serial drivers
 #
