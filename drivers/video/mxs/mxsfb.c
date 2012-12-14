@@ -725,10 +725,12 @@ static int mxsfb_lcd_power_store(struct device *dev,
 
 	if (strnicmp(buf, "on", 2) == 0 ||
 			strnicmp(buf, "1", 1) == 0) {
+		set_controller_state(cdata, F_ENABLE);
 		mxsfb_lcd_power(1);
 	} else if (strnicmp(buf, "off", 3) == 0 ||
 			strnicmp(buf, "0", 1) == 0) {
 		mxsfb_lcd_power(0);
+		set_controller_state(cdata, F_DISABLE);
 	} else {
 		return -EINVAL;
 	}
@@ -966,6 +968,10 @@ static int mxsfb_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
+#ifdef CONFIG_MACH_MX23_CANOPUS
+#define mxsfb_suspend	NULL
+#define	mxsfb_resume	NULL
+#else
 static int mxsfb_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct mxs_fb_data *data = platform_get_drvdata(pdev);
@@ -982,6 +988,7 @@ static int mxsfb_resume(struct platform_device *pdev)
 	set_controller_state(data, F_ENABLE);
 	return 0;
 }
+#endif
 #else
 #define mxsfb_suspend	NULL
 #define	mxsfb_resume	NULL
