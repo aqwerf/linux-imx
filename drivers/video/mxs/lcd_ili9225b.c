@@ -388,7 +388,7 @@ _lcd_panel_power(int set, dma_addr_t phys)
 		mdelay(50);
 
 		/* for external LCD */
-		_lcd_panel_init(_LCD_BYD);
+		_lcd_panel_init(_LCD_TCL);
 		_lcd_panel_set_prepare(0, 0);
 		mdelay(2);
 
@@ -497,7 +497,7 @@ _lcdif_init_panel(struct device *dev, dma_addr_t phys, int memsize,
 		mdelay(50);
 		
 		/* for external LCD */
-		_lcd_panel_init(_LCD_BYD);
+		_lcd_panel_init(_LCD_TCL);
 
 		ili9225b_lcdif_dma_send(phys);
 	} else {
