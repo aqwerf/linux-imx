@@ -74,8 +74,6 @@ static int _bl_power[] = {
 	0, 1500, 3600, 6100, 10300, 15500, 74200, 114200, 155200, 190100, 191000
 };
 
-static int _lcd_power = 1;
-
 /*_____________________ Local Declarations __________________________________*/
 
 /*_____________________ internal functions __________________________________*/
@@ -373,8 +371,6 @@ _lcd_panel_power(int set, dma_addr_t phys)
 	if (!_init_temp)
 		return 0;
 
-	_lcd_power = set;
-
 	if (atomic_read(&_init_panel) == set)
 		return 0;
 
@@ -659,8 +655,6 @@ _bl_set_intensity(struct mxs_platform_bl_data *data,
 	if (bd->props.fb_blank != FB_BLANK_UNBLANK)
 		intensity = 0;
 	if (suspended)
-		intensity = 0;
-	if (!_lcd_power)
 		intensity = 0;
 
 	/*
