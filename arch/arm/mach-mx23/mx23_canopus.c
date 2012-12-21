@@ -33,6 +33,8 @@
 #include <mach/device.h>
 #include <mach/pinctrl.h>
 #include <mach/regs-ocotp.h>
+#include <mach/regs-power.h>
+#include <mach/system.h>
 
 #include "device.h"
 #include "mx23_canopus.h"
@@ -101,6 +103,15 @@ static void __init mx23_canopus_device_init(void)
 #endif
 }
 
+static void mx23_reset(char mode, const char *cmd)
+{
+	__raw_writel(BF_POWER_RESET_UNLOCK(BV_POWER_RESET_UNLOCK__KEY) +
+		     BM_POWER_RESET_PWD,
+		     REGS_POWER_BASE + HW_POWER_RESET);
+	while (1)
+		;
+}
+
 static void __init mx23_canopus_init_machine(void)
 {
 	mx23_pinctrl_init();
@@ -112,6 +123,8 @@ static void __init mx23_canopus_init_machine(void)
 #else
 	iram_init(MX23_OCRAM_PHBASE, MX23_OCRAM_SIZE);
 #endif
+
+	machine_arch_reset = mx23_reset;
 
 	mx23_gpio_init();
 	mx23_canopus_pins_init();

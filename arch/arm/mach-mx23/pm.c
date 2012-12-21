@@ -563,7 +563,14 @@ void mx23_pm_idle(void)
 
 static void mx23_pm_power_off(void)
 {
-	__raw_writel((0x3e77 << 16) | 1, REGS_POWER_BASE + HW_POWER_RESET);
+	__raw_writel(BM_RTC_PERSISTENT0_AUTO_RESTART,
+		     IO_ADDRESS(RTC_PHYS_ADDR) + HW_RTC_PERSISTENT0_CLR);
+	udelay(100);
+	__raw_writel(BF_POWER_RESET_UNLOCK(BV_POWER_RESET_UNLOCK__KEY) +
+		     BM_POWER_RESET_PWD,
+		     REGS_POWER_BASE + HW_POWER_RESET);
+	while (1)
+		;
 }
 
 struct mx23_pswitch_state {
