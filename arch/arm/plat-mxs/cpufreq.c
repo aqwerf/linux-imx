@@ -463,6 +463,10 @@ static int __init mxs_cpu_init(struct cpufreq_policy *policy)
 	high_freq_needed = 0;
 	cur_freq_table_size = lcd_on_freq_table_size;
 
+	/* set max frequency for enable auto-slow */
+	set_op(policy, profiles[1].cpu);
+	set_op(policy, profiles[0].cpu);
+
 	printk(KERN_INFO "%s: cpufreq init finished\n", __func__);
 	return 0;
 out_cur:
