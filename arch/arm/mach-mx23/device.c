@@ -819,40 +819,32 @@ static ddi_bc_Cfg_t battery_data = {
 	.u16ConditioningThresholdVoltage = 2900, 	/* mV */
 	.u16ConditioningMaxVoltage	 = 3000,	/* mV */
 #ifdef CONFIG_MACH_MX23_CANOPUS
-	.u16ConditioningCurrent		 = 30,		/* mA */
-#else
-	.u16ConditioningCurrent		 = 60,		/* mA */
-#endif
-	.u32ConditioningTimeout		 = 4*60*60*1000, /* ms (4 hours) */
-#ifdef CONFIG_MACH_MX23_CANOPUS
+	.u16ConditioningCurrent		 = 50,		/* mA */
+	.u32ConditioningTimeout		 = 10*60*60*1000, /* ms (10 hours) */
 	.u16ChargingVoltage		 = 4100,	/* mV */
-#else
-	.u16ChargingVoltage		 = 4200,	/* mV */
-#endif
 	/* FIXME: the current comparator could have h/w bugs in current
 	 * detection through POWER_STS.CHRGSTS bit */
-#ifdef CONFIG_MACH_MX23_CANOPUS
-	.u16ChargingCurrent		 = 500,		/* mA 500 */
-	.u16ChargingThresholdCurrent	 = 50,		/* mA 50 */
+	.u16ChargingCurrent		 = 650,		/* mA 650 */
+	.u16ChargingThresholdCurrent	 = 65,		/* mA 65 */
+	.u32ChargingTimeout		 = 10*60*60*1000,/* ms (10 hours) */
+	.u32TopOffPeriod		 = 1*60*1000,	/* ms (1 minutes) */
+	.monitorDieTemp			 = 0,		/* Monitor the die */
 #else
+	.u16ConditioningCurrent		 = 60,		/* mA */
+	.u32ConditioningTimeout		 = 4*60*60*1000, /* ms (4 hours) */
+	.u16ChargingVoltage		 = 4200,	/* mV */
+	/* FIXME: the current comparator could have h/w bugs in current
+	 * detection through POWER_STS.CHRGSTS bit */
 	.u16ChargingCurrent		 = 600,		/* mA 600 */
 	.u16ChargingThresholdCurrent	 = 60,		/* mA 60 */
-#endif
 	.u32ChargingTimeout		 = 4*60*60*1000,/* ms (4 hours) */
-#ifdef CONFIG_MACH_MX23_CANOPUS
-	.u32TopOffPeriod		 = 1*60*1000,	/* ms (1 minutes) */
-#else
 	.u32TopOffPeriod		 = 30*60*1000,	/* ms (30 minutes) */
-#endif
 	.monitorDieTemp			 = 1,		/* Monitor the die */
+#endif
 	.u8DieTempHigh			 = 75,		/* deg centigrade */
 	.u8DieTempLow			 = 65,		/* deg centigrade */
 	.u16DieTempSafeCurrent		 = 0,		/* mA */
-#ifdef CONFIG_MACH_MX23_CANOPUS
-	.monitorBatteryTemp		 = 1,		/* Monitor the battery*/
-#else
 	.monitorBatteryTemp		 = 0,		/* Monitor the battery*/
-#endif
 	.u8BatteryTempChannel		 = 1,		/* LRADC 1 */
 	.u16BatteryTempHigh		 = 642,		/* Unknown units */
 	.u16BatteryTempLow		 = 497,		/* Unknown units */
