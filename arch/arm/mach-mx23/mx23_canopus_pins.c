@@ -574,7 +574,7 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.voltage	= PAD_3_3V,
 		.drive		= 1,
 		.output		= 1,
-		.data		= 1,
+		.data		= 0,
 	},
 	/* Interrupt Input Siganl for Key Pressing */
 	{

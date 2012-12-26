@@ -36,6 +36,9 @@
 
 /*_____________________ Constants Definitions _______________________________*/
 
+#define MXS_RECEIVER_AMP_ON		_IOW('F', 0, int)
+#define MXS_RECEIVER_AMP_OFF		_IOW('F', 1, int)
+
 /*_____________________ Type definitions ____________________________________*/
 
 /*_____________________ Imported Variables __________________________________*/
@@ -95,10 +98,34 @@ static unsigned int jack_poll(struct file *f, struct poll_table_struct *p)
 	return (update) ? POLLIN | POLLWRNORM : 0;
 }
 
+static int jack_ioctl(struct inode *inode, struct file *file,
+		unsigned int cmd, unsigned long arg)
+{
+	int ret = 0;
+	int set;
+
+	if (_IOC_TYPE(cmd) != 'F')
+		return -ENOTTY;
+
+	switch (cmd) {
+	case MXS_RECEIVER_AMP_ON:
+		mxs_audio_receiver_amp_gpio_set(1);
+		break;
+	case MXS_RECEIVER_AMP_OFF:
+		mxs_audio_receiver_amp_gpio_set(0);
+		break;
+	default:
+		break;
+	}
+
+	return ret;
+}
+
 static const struct file_operations fops = {
 	.owner		= THIS_MODULE,
 	.read		= jack_read,
-	.poll		= jack_poll
+	.poll		= jack_poll,
+	.ioctl		= jack_ioctl
 };
 
 static struct miscdevice miscdev = {
