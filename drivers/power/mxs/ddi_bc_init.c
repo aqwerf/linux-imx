@@ -171,6 +171,9 @@ ddi_bc_Status_t ddi_bc_Init(ddi_bc_Cfg_t *pCfg)
 	/* -------------------------------------------------------------------------- */
 
 	g_ddi_bc_State = DDI_BC_STATE_DISABLED;
+#ifdef MXS_CANOPUS_LOG_ENABLE
+	mxs_log_charge_update(0);
+#endif
 
 	/* -------------------------------------------------------------------------- */
 	/* Return success. */

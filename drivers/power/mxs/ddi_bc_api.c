@@ -84,6 +84,9 @@ void ddi_bc_ShutDown()
 	/* -------------------------------------------------------------------------- */
 
 	g_ddi_bc_State = DDI_BC_STATE_UNINITIALIZED;
+#ifdef MXS_CANOPUS_LOG_ENABLE
+	mxs_log_charge_update(0);
+#endif
 
 }
 
@@ -195,6 +198,9 @@ ddi_bc_Status_t ddi_bc_SetDisable()
 	/* -------------------------------------------------------------------------- */
 
 	g_ddi_bc_State = DDI_BC_STATE_DISABLED;
+#ifdef MXS_CANOPUS_LOG_ENABLE
+	mxs_log_charge_update(0);
+#endif
 
 	/* -------------------------------------------------------------------------- */
 	/* Return success. */
@@ -247,6 +253,9 @@ ddi_bc_Status_t ddi_bc_SetEnable()
 	/* -------------------------------------------------------------------------- */
 
 	g_ddi_bc_State = DDI_BC_STATE_WAITING_TO_CHARGE;
+#ifdef MXS_CANOPUS_LOG_ENABLE
+	mxs_log_charge_update(0);
+#endif
 
 	/* -------------------------------------------------------------------------- */
 	/* Return success. */
@@ -299,6 +308,9 @@ ddi_bc_Status_t ddi_bc_SetBroken()
 	ddi_bc_gBrokenReason = DDI_BC_BROKEN_CHARGING_TIMEOUT;
 
 	g_ddi_bc_State = DDI_BC_STATE_BROKEN;
+#ifdef MXS_CANOPUS_LOG_ENABLE
+	mxs_log_charge_update(0);
+#endif
 
 	/* -------------------------------------------------------------------------- */
 	/* Return success. */
@@ -357,6 +369,9 @@ ddi_bc_Status_t ddi_bc_SetFixed()
 	/* -------------------------------------------------------------------------- */
 
 	g_ddi_bc_State = DDI_BC_STATE_DISABLED;
+#ifdef MXS_CANOPUS_LOG_ENABLE
+	mxs_log_charge_update(0);
+#endif
 
 	/* -------------------------------------------------------------------------- */
 	/* Return success. */

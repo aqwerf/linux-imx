@@ -120,6 +120,9 @@ static void TransitionToWaitingToCharge(void)
 	/* -------------------------------------------------------------------------- */
 
 	g_ddi_bc_State = DDI_BC_STATE_WAITING_TO_CHARGE;
+#ifdef MXS_CANOPUS_LOG_ENABLE
+	mxs_log_charge_update(0);
+#endif
 
 #ifdef CONFIG_POWER_SUPPLY_DEBUG
 	printk("Battery charger: now waiting to charge\n");
@@ -156,6 +159,9 @@ static void TransitionToConditioning(void)
 	/* -------------------------------------------------------------------------- */
 
 	g_ddi_bc_State = DDI_BC_STATE_CONDITIONING;
+#ifdef MXS_CANOPUS_LOG_ENABLE
+	mxs_log_charge_update(0);
+#endif
 
 #ifdef CONFIG_POWER_SUPPLY_DEBUG
 	printk("Battery charger: now conditioning\n");
@@ -199,6 +205,9 @@ static void TransitionToCharging(void)
 	/* -------------------------------------------------------------------------- */
 
 	g_ddi_bc_State = DDI_BC_STATE_CHARGING;
+#ifdef MXS_CANOPUS_LOG_ENABLE
+	mxs_log_charge_update(0);
+#endif
 #ifdef CONFIG_POWER_SUPPLY_DEBUG
 	printk("Battery charger: now charging\n");
 #endif
@@ -233,6 +242,9 @@ static void TransitionToToppingOff(void)
 	/* -------------------------------------------------------------------------- */
 
 	g_ddi_bc_State = DDI_BC_STATE_TOPPING_OFF;
+#ifdef MXS_CANOPUS_LOG_ENABLE
+	mxs_log_charge_update(0);
+#endif
 
 #ifdef CONFIG_POWER_SUPPLY_DEBUG
 	printk("Battery charger: now topping off\n");
@@ -269,6 +281,9 @@ static void TransitionToBroken(void)
 	/* -------------------------------------------------------------------------- */
 
 	g_ddi_bc_State = DDI_BC_STATE_BROKEN;
+#ifdef MXS_CANOPUS_LOG_ENABLE
+	mxs_log_charge_update(0);
+#endif
 
 	pr_info("charger------ ddi_bc_gBrokenReason=%d\n",
 		ddi_bc_gBrokenReason);
@@ -907,6 +922,9 @@ static ddi_bc_Status_t ddi_bc_ToppingOff(void)
 
 #ifdef CONFIG_MACH_MX23_CANOPUS
 		g_ddi_bc_State = DDI_BC_STATE_TOPPING_OFF_COMPLETE;
+#endif
+#ifdef MXS_CANOPUS_LOG_ENABLE
+		mxs_log_charge_update(0);
 #endif
 
 	}

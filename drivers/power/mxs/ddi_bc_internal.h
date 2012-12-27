@@ -28,6 +28,9 @@
 #ifndef _DDI_BC_INTERNAL_H
 #define _DDI_BC_INTERNAL_H
 
+#ifdef CONFIG_MACH_MX23_CANOPUS
+#include "mxs-log.h"
+#endif
 
 /* Includes */
 

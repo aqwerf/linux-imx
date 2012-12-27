@@ -36,6 +36,7 @@
 #include <linux/uaccess.h>
 #include <linux/circ_buf.h>
 #include <mach/device.h>
+#include "ddi_bc_internal.h"
 #ifdef CONFIG_HAS_WAKELOCK
 #include <linux/wakelock.h>
 
@@ -1009,9 +1010,17 @@ static void state_machine_work(struct work_struct *work)
 
 	check_and_handle_5v_connection(info);
 
+#ifdef MXS_CANOPUS_LOG_ENABLE
+	static unsigned long i;
+	int timeout = mxs_log_charge_get_timeout();
+
+	if (timeout && !(i++ % (10 * timeout)))
+		mxs_log_charge_update(1);
+#endif
+
 #ifdef CONFIG_MACH_MX23_CANOPUS
-	int ret = mxs_bat_health_status();
 	if (info->sm_5v_connection_status == _5v_connected_verified) {
+		int ret = mxs_bat_health_status();
 		if (ret > POWER_SUPPLY_HEALTH_GOOD) {
 			if (ret == POWER_SUPPLY_HEALTH_DEAD)
 				_change_state(MXS_EVENT_FULL_CHARGED);
@@ -1272,6 +1281,32 @@ static irqreturn_t mxs_irq_vdd5v(int irq, void *cookie)
 	return IRQ_HANDLED;
 }
 
+#ifdef MXS_CANOPUS_LOG_ENABLE
+static int mxs_bat_log_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int timeout = mxs_log_charge_get_timeout();
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", timeout);
+}
+
+static int mxs_bat_log_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t len)
+{
+	unsigned long long timeout;
+
+	strict_strtoull(buf, 0, &timeout);
+
+	mxs_log_charge_set_timeout(timeout);
+
+	return len;
+}
+
+static DEVICE_ATTR(log_timeout, 0644,
+		   mxs_bat_log_show,
+		   mxs_bat_log_store);
+#endif
+
 static int mxs_bat_probe(struct platform_device *pdev)
 {
 	struct mxs_info *info;
@@ -1419,6 +1454,15 @@ static int mxs_bat_probe(struct platform_device *pdev)
 
 	mxs_bat_event_list_init();
 	mxs_event.head = mxs_event.tail = 0;
+#endif
+
+#ifdef MXS_CANOPUS_LOG_ENABLE
+	ret = device_create_file(&(pdev->dev), &dev_attr_log_timeout);
+	if (ret < 0) {
+		printk(KERN_DEBUG "error adding mxs_bat attr\n");
+		ret = -1;
+		goto buf_failed;
+	}
 #endif
 
 	init_timer(&info->sm_timer);
