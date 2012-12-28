@@ -4,6 +4,7 @@
 #include <linux/syscalls.h>
 #include <linux/fcntl.h>
 #include <linux/uaccess.h>
+#include <linux/rtc.h>
 
 #include "ddi_bc_internal.h"
 #include "mxs-log.h"
@@ -74,19 +75,24 @@ int mxs_log_charge_get_timeout(void)
 void mxs_log_charge_update(int mode) /* 0 : event, 1 : auto */
 {
 	char log[100];
-	struct timeval tv;
+	struct timespec ts;
+	struct rtc_time tm;
 	int16_t i16Low;
 	int16_t i16High;
 
 	if (!_timeout || mxs_log_open(_FILE_NAME) < 0)
 		return;
 
-	do_gettimeofday(&tv);
+	getnstimeofday(&ts);
 
 	if (_state == -1) {
-		_time = tv.tv_sec;
-		mxs_log_write(_FILE_NAME,
-				"Time,Mode,Voltage,Status,Broken,DieTemp\n");
+		_time = ts.tv_sec;
+		rtc_time_to_tm(ts.tv_sec, &tm);
+		sprintf(log, "%d-%02d-%02d %02d:%02d:%02d,,,,,\n%s\n",
+				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+				tm.tm_hour, tm.tm_min, tm.tm_sec,
+				"Time,Mode,Voltage,Status,Broken,DieTemp");
+		mxs_log_write(_FILE_NAME, log);
 	}
 
 	if (!mode && _state == ddi_bc_GetState())
@@ -97,7 +103,7 @@ void mxs_log_charge_update(int mode) /* 0 : event, 1 : auto */
 	ddi_bc_hwGetDieTemp(&i16Low, &i16High);
 
 	sprintf(log, "%ld,%d,%d.%03d,%d,%d,%d\n",
-			(tv.tv_sec - _time),
+			(ts.tv_sec - _time),
 			mode,
 			(ddi_power_GetBattery()/1000),
 			(ddi_power_GetBattery()%1000),
