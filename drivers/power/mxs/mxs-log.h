@@ -13,4 +13,6 @@ extern void mxs_log_charge_set_timeout(int timeout);
 extern int mxs_log_charge_get_timeout(void);
 extern void mxs_log_charge_update(int mode);
 
+extern int mxs_bat_get_ui_status(void);
+
 #endif

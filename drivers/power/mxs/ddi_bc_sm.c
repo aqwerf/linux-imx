@@ -463,6 +463,16 @@ static ddi_bc_Status_t ddi_bc_WaitingToCharge(void)
 #endif
 
 
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	uint16_t x;
+
+	/* for recharge voltage to 3.827V */
+	x = u16BatteryVoltage + (u16BatteryVoltage / 15);
+
+	if (g_ddi_bc_State == DDI_BC_STATE_TOPPING_OFF_COMPLETE &&
+			x >= g_ddi_bc_Configuration.u16ChargingVoltage)
+		return DDI_BC_STATUS_SUCCESS;
+#else
 	/* -------------------------------------------------------------------------- */
 	/* If the battery voltage isn't low, we don't need to be charging it. We */
 	/* use a 5% margin to decide. */
@@ -473,17 +483,12 @@ static ddi_bc_Status_t ddi_bc_WaitingToCharge(void)
 
 		x = u16BatteryVoltage + (u16BatteryVoltage / 20);
 
-		if (x >= g_ddi_bc_Configuration.u16ChargingVoltage) {
-#ifdef CONFIG_MACH_MX23_CANOPUS
-			if (g_ddi_bc_State != DDI_BC_STATE_TOPPING_OFF_COMPLETE)
-				TransitionToToppingOff();
-#endif
+		if (x >= g_ddi_bc_Configuration.u16ChargingVoltage)
 			return DDI_BC_STATUS_SUCCESS;
-		}
-
 	}
 
 	bRestartChargeCycle = false;
+#endif
 	/* -------------------------------------------------------------------------- */
 	/* If control arrives here, the battery is low. How low? */
 	/* -------------------------------------------------------------------------- */

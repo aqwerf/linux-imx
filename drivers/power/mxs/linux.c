@@ -207,10 +207,16 @@ static struct list_head mxs_events[MXS_EVENT_NUM];
 static struct mxs_info *mxs_pdev_info;
 static int bat_fault_led_status;
 static int _main_state = MXS_EVENT_BATTERY;
+static int _tmpr_state;
 static DECLARE_MUTEX(mxs_event_mutex);
 
 static void _mxs_bat_fault_led_work(struct work_struct *work);
 DECLARE_DELAYED_WORK(_bat_fault_led, _mxs_bat_fault_led_work);
+
+int mxs_bat_get_ui_status(void)
+{
+	return _main_state;
+}
 
 static void mxs_bat_led_status(int state)
 {
@@ -246,6 +252,29 @@ static void mxs_bat_fault_led_control(int val)
 		mxs_bat_led_status(MXS_LED_ALL_OFF);
 }
 
+static int mxs_bat_average(int reset, int count, int input)
+{
+	static int _output;
+	static int _count;
+	int output = 0;
+
+	if (reset) {
+		_output = 0;
+		_count = 0;
+	} else {
+		if (_count >= count) {
+			output = _output;
+			_output = 0;
+			_count = 0;
+		} else {
+			_output  = ((_output * _count) + input) / (_count + 1);
+			_count++;
+		}
+	}
+
+	return output;
+}
+
 static void _change_state(int new_state)
 {
 	const char *mode = "";
@@ -271,10 +300,18 @@ static void _change_state(int new_state)
 
 	switch (_main_state) {
 	case MXS_EVENT_CHARGING:
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_lock(&_charger_wake_lock);
+#endif
 		mode = "MXS_EVENT_CHARGING";
 		mxs_bat_led_status(MXS_LED_RED);
+
+		mxs_bat_average(1, 0, 0);
 		break;
 	case MXS_EVENT_BATTERY:
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_unlock(&_charger_wake_lock);
+#endif
 		mode = "MXS_EVENT_BATTERY";
 		mxs_bat_led_status(MXS_LED_ALL_OFF);
 		break;
@@ -290,67 +327,6 @@ static void _change_state(int new_state)
 		break;
 	}
 	printk(KERN_DEBUG "mxs-power: mode = %s\n", mode);
-}
-
-static int mxs_bat_charging_status(void)
-{
-	int ret;
-	struct mxs_info *info = mxs_pdev_info;
-	ddi_bc_State_t state = ddi_bc_GetState();
-
-	switch (state) {
-	case DDI_BC_STATE_CONDITIONING:
-	case DDI_BC_STATE_CHARGING:
-	case DDI_BC_STATE_TOPPING_OFF:
-		ret = POWER_SUPPLY_STATUS_CHARGING;
-		break;
-	case DDI_BC_STATE_DISABLED:
-		ret = (ddi_power_Get5vPresentFlag()
-				&& !info->onboard_vbus5v_online) ?
-			POWER_SUPPLY_STATUS_NOT_CHARGING :
-			POWER_SUPPLY_STATUS_DISCHARGING;
-		break;
-	case DDI_BC_STATE_TOPPING_OFF_COMPLETE:
-		ret = POWER_SUPPLY_STATUS_FULL;
-		break;
-	default:
-		ret = POWER_SUPPLY_STATUS_NOT_CHARGING;
-		break;
-	}
-
-	return ret;
-}
-
-static int mxs_bat_health_status(void)
-{
-	int ret;
-	int die_temp_alarm = ddi_bc_RampGetDieTempAlarm();
-	int bat_temp_alarm = ddi_bc_RampGetBatteryTempAlarm();
-	ddi_bc_State_t state;
-	ddi_bc_BrokenReason_t reason;
-
-	if (die_temp_alarm || bat_temp_alarm) {
-		ret = POWER_SUPPLY_HEALTH_OVERHEAT;
-	} else {
-		state = ddi_bc_GetState();
-		switch (state) {
-		case DDI_BC_STATE_BROKEN:
-			reason = ddi_bc_GetBrokenReason();
-			ret =
-				(reason == DDI_BC_BROKEN_CHARGING_TIMEOUT) ?
-				POWER_SUPPLY_HEALTH_DEAD :
-				POWER_SUPPLY_HEALTH_UNSPEC_FAILURE;
-			break;
-		case DDI_BC_STATE_UNINITIALIZED:
-			ret = POWER_SUPPLY_HEALTH_UNKNOWN;
-			break;
-		default:
-			ret = POWER_SUPPLY_HEALTH_GOOD;
-			break;
-		}
-	}
-
-	return ret;
 }
 
 static void _mxs_bat_fault_led_work(struct work_struct *work)
@@ -1020,17 +996,31 @@ static void state_machine_work(struct work_struct *work)
 
 #ifdef CONFIG_MACH_MX23_CANOPUS
 	if (info->sm_5v_connection_status == _5v_connected_verified) {
-		int ret = mxs_bat_health_status();
-		if (ret > POWER_SUPPLY_HEALTH_GOOD) {
-			if (ret == POWER_SUPPLY_HEALTH_DEAD)
-				_change_state(MXS_EVENT_FULL_CHARGED);
-			else if (ddi_power_GetBattery() >=
-					DDI_BC_LIION_CHARGING_VOLTAGE)
-				_change_state(MXS_EVENT_FULL_CHARGED);
-			else
+		int die_tmpr = ddi_bc_RampGetDieTempAlarm();
+		int bat_tmpr = ddi_bc_RampGetBatteryTempAlarm();
+		int voltage = ddi_power_GetBattery();
+		int voltage_avr = mxs_bat_average(0, 3000, voltage);
+
+		ddi_bc_State_t state = ddi_bc_GetState();
+		ddi_bc_BrokenReason_t reason = ddi_bc_GetBrokenReason();
+
+		if (!_tmpr_state && (die_tmpr || bat_tmpr)) {
+			_tmpr_state = 1;
+			_change_state(MXS_EVENT_FAULT);
+		} else if (_tmpr_state && !die_tmpr && !bat_tmpr) {
+			_tmpr_state = 0;
+			_change_state(MXS_EVENT_CHARGING);
+		} else if (state == DDI_BC_STATE_BROKEN) {
+			if (reason == DDI_BC_BROKEN_CHARGING_TIMEOUT) {
+				if (voltage >= DDI_BC_LIION_CHARGING_VOLTAGE) {
+					ddi_bc_SetFixed();
+					ddi_bc_SetEnable();
+					_change_state(MXS_EVENT_FULL_CHARGED);
+				}
+			} else
 				_change_state(MXS_EVENT_FAULT);
-		} else if (mxs_bat_charging_status() ==
-				POWER_SUPPLY_STATUS_FULL)
+		} else if (state == DDI_BC_STATE_TOPPING_OFF_COMPLETE ||
+				voltage_avr >= DDI_BC_LIION_CHARGING_VOLTAGE+50)
 			_change_state(MXS_EVENT_FULL_CHARGED);
 	}
 #endif
@@ -1245,9 +1235,6 @@ static irqreturn_t mxs_irq_vdd5v(int irq, void *cookie)
 	switch (ddi_power_GetPmu5vStatus()) {
 
 	case new_5v_connection:
-#ifdef CONFIG_HAS_WAKELOCK
-		wake_lock(&_charger_wake_lock);
-#endif
 		ddi_power_disable_5v_connection_irq();
 		dev_dbg(info->dev, "new 5v connection detected\n");
 		info->sm_new_5v_connection_jiffies = jiffies;
@@ -1255,9 +1242,6 @@ static irqreturn_t mxs_irq_vdd5v(int irq, void *cookie)
 		break;
 
 	case new_5v_disconnection:
-#ifdef CONFIG_HAS_WAKELOCK
-		wake_unlock(&_charger_wake_lock);
-#endif
 		/* due to 5v connect vddio bo chip bug, we need to
 		 * disable vddio interrupts until we reset the 5v
 		 * detection for 5v connect detect.  We want to allow

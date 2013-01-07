@@ -828,7 +828,10 @@ static ddi_bc_Cfg_t battery_data = {
 	.u16ChargingThresholdCurrent	 = 65,		/* mA 65 */
 	.u32ChargingTimeout		 = 10*60*60*1000,/* ms (10 hours) */
 	.u32TopOffPeriod		 = 1*60*1000,	/* ms (1 minutes) */
-	.monitorDieTemp			 = 0,		/* Monitor the die */
+	.monitorDieTemp			 = 1,		/* Monitor the die */
+	.u8DieTempHigh			 = 85,		/* deg centigrade */
+	.u8DieTempLow			 = 75,		/* deg centigrade */
+	.u16DieTempSafeCurrent		 = 0,		/* mA */
 #else
 	.u16ConditioningCurrent		 = 60,		/* mA */
 	.u32ConditioningTimeout		 = 4*60*60*1000, /* ms (4 hours) */
@@ -840,10 +843,10 @@ static ddi_bc_Cfg_t battery_data = {
 	.u32ChargingTimeout		 = 4*60*60*1000,/* ms (4 hours) */
 	.u32TopOffPeriod		 = 30*60*1000,	/* ms (30 minutes) */
 	.monitorDieTemp			 = 1,		/* Monitor the die */
-#endif
 	.u8DieTempHigh			 = 75,		/* deg centigrade */
 	.u8DieTempLow			 = 65,		/* deg centigrade */
 	.u16DieTempSafeCurrent		 = 0,		/* mA */
+#endif
 	.monitorBatteryTemp		 = 0,		/* Monitor the battery*/
 	.u8BatteryTempChannel		 = 1,		/* LRADC 1 */
 	.u16BatteryTempHigh		 = 642,		/* Unknown units */

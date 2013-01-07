@@ -53,7 +53,8 @@ void mxs_log_write(char *filename, char *str)
 	set_fs(old_fs);
 }
 
-#define _FILE_NAME	"/udp-flash/log_charge.txt"
+#define _FILE_NAME "/udp-flash/log_charge.txt"
+#define _LOG_TITLE "Time,Mode,Voltage,Status(core),Status(ui),Broken,DieTemp"
 
 /* for state backup */
 static ddi_bc_State_t _state = -1;
@@ -88,10 +89,10 @@ void mxs_log_charge_update(int mode) /* 0 : event, 1 : auto */
 	if (_state == -1) {
 		_time = ts.tv_sec;
 		rtc_time_to_tm(ts.tv_sec, &tm);
-		sprintf(log, "%d-%02d-%02d %02d:%02d:%02d,,,,,\n%s\n",
+		sprintf(log, "%d-%02d-%02d %02d:%02d:%02d,,,,,,\n%s\n",
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
 				tm.tm_hour, tm.tm_min, tm.tm_sec,
-				"Time,Mode,Voltage,Status,Broken,DieTemp");
+				_LOG_TITLE);
 		mxs_log_write(_FILE_NAME, log);
 	}
 
@@ -102,12 +103,13 @@ void mxs_log_charge_update(int mode) /* 0 : event, 1 : auto */
 
 	ddi_bc_hwGetDieTemp(&i16Low, &i16High);
 
-	sprintf(log, "%ld,%d,%d.%03d,%d,%d,%d\n",
+	sprintf(log, "%ld,%d,%d.%03d,%d,%d,%d,%d\n",
 			(ts.tv_sec - _time),
 			mode,
 			(ddi_power_GetBattery()/1000),
 			(ddi_power_GetBattery()%1000),
 			_state,
+			mxs_bat_get_ui_status(),
 			ddi_bc_GetBrokenReason(),
 			(i16High - 5)); /* remove margin */
 
