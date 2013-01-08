@@ -59,17 +59,25 @@ static int saved_sleep_state;
 #define MAX_POWEROFF_CODE_SIZE (6 * 1024)
 #define REGS_CLKCTRL_BASE IO_ADDRESS(CLKCTRL_PHYS_ADDR)
 
+#if 0
+#include "../../../drivers/serial/regs-duart.h"
+static inline void _putc(int ch)
+{
+	while ((__raw_readl(IO_ADDRESS(DUART_PHYS_ADDR) + HW_UARTDBGFR) &
+		BM_UARTDBGFR_TXFE) == 0)
+		;
+	__raw_writel(ch, IO_ADDRESS(DUART_PHYS_ADDR) + HW_UARTDBGDR);
+	while ((__raw_readl(IO_ADDRESS(DUART_PHYS_ADDR) + HW_UARTDBGFR) &
+		BM_UARTDBGFR_TXFE) == 0)
+		;
+}
+#endif
+
 static void mx23_standby(void)
 {
 	int i;
 	u32 reg_vddd, reg_vdda, reg_vddio;
 	/* DDR EnterSelfrefreshMode */
-	__raw_writel(
-	BF_DRAM_CTL16_LOWPOWER_AUTO_ENABLE(0x2) |
-	__raw_readl(IO_ADDRESS(DRAM_PHYS_ADDR)
-		+ HW_DRAM_CTL16),
-	IO_ADDRESS(DRAM_PHYS_ADDR) + HW_DRAM_CTL16);
-
 	__raw_writel(
 	BF_DRAM_CTL16_LOWPOWER_CONTROL(0x2) |
 	__raw_readl(IO_ADDRESS(DRAM_PHYS_ADDR)
@@ -81,6 +89,9 @@ static void mx23_standby(void)
 			REGS_CLKCTRL_BASE + HW_CLKCTRL_EMI);
 
 	/* Disable PLL */
+	__raw_writel(BM_CLKCTRL_FRAC_CLKGATEEMI,
+		     REGS_CLKCTRL_BASE + HW_CLKCTRL_FRAC_SET);
+
 	__raw_writel(BM_CLKCTRL_PLLCTRL0_POWER,
 		REGS_CLKCTRL_BASE + HW_CLKCTRL_PLLCTRL0_CLR);
 
@@ -156,14 +167,19 @@ static void mx23_standby(void)
 	__raw_writel(BM_CLKCTRL_CPU_INTERRUPT_WAIT,
 		REGS_CLKCTRL_BASE + HW_CLKCTRL_CPU_SET);
 	/* Power off ... */
-	asm("mcr     p15, 0, r2, c7, c0, 4");
+	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c0, 4\n"
+			      : : "r" (0));
 	__raw_writel(BM_CLKCTRL_CPU_INTERRUPT_WAIT,
 			REGS_CLKCTRL_BASE + HW_CLKCTRL_CPU_CLR);
 
 	/* Enable PLL */
 	__raw_writel(BM_CLKCTRL_PLLCTRL0_POWER,
 		REGS_CLKCTRL_BASE + HW_CLKCTRL_PLLCTRL0_SET);
-
+	while ((__raw_readl(REGS_CLKCTRL_BASE + HW_CLKCTRL_PLLCTRL1) &
+	       BM_CLKCTRL_PLLCTRL1_LOCK) == 0)
+		;
+	__raw_writel(BM_CLKCTRL_FRAC_CLKGATEEMI,
+		     REGS_CLKCTRL_BASE + HW_CLKCTRL_FRAC_CLR);
 	/* restore the DCDC parameter */
 
 	__raw_writel(BM_POWER_MINPWR_EN_DC_PFM,
@@ -225,12 +241,6 @@ static void mx23_standby(void)
 	__raw_readl(IO_ADDRESS(DRAM_PHYS_ADDR)
 		+ HW_DRAM_CTL16),
 	IO_ADDRESS(DRAM_PHYS_ADDR) + HW_DRAM_CTL16);
-
-	__raw_writel(
-	(~BF_DRAM_CTL16_LOWPOWER_AUTO_ENABLE(0x2)) &
-	__raw_readl(IO_ADDRESS(DRAM_PHYS_ADDR)
-		+ HW_DRAM_CTL16),
-	IO_ADDRESS(DRAM_PHYS_ADDR) + HW_DRAM_CTL16);
 }
 
 static inline void do_standby(void)
@@ -246,6 +256,7 @@ static inline void do_standby(void)
 	u32 reg_clkctrl_clkseq, reg_clkctrl_xtal;
 	unsigned long iram_phy_addr;
 	void *iram_virtual_addr;
+	u32 reg_frac;
 
 	/*
 	 * 1) switch clock domains from PLL to 24MHz
@@ -309,10 +320,15 @@ static inline void do_standby(void)
 		BM_CLKCTRL_XTAL_DRI_CLK24M_GATE,
 		REGS_CLKCTRL_BASE + HW_CLKCTRL_XTAL);
 
+	reg_frac = __raw_readl(REGS_CLKCTRL_BASE + HW_CLKCTRL_FRAC);
+	__raw_writel(BM_CLKCTRL_FRAC_CLKGATEIO | BM_CLKCTRL_FRAC_CLKGATEPIX,
+		     REGS_CLKCTRL_BASE + HW_CLKCTRL_FRAC_SET);
+
 	/* do suspend */
 	mx23_cpu_standby_ptr = iram_virtual_addr;
 	mx23_cpu_standby_ptr();
 
+	__raw_writel(reg_frac, REGS_CLKCTRL_BASE + HW_CLKCTRL_FRAC);
 	__raw_writel(reg_clkctrl_clkseq, REGS_CLKCTRL_BASE + HW_CLKCTRL_CLKSEQ);
 	__raw_writel(reg_clkctrl_xtal, REGS_CLKCTRL_BASE + HW_CLKCTRL_XTAL);
 
