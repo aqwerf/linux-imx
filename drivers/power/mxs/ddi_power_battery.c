@@ -86,7 +86,7 @@
 #define BATTERY_VOLTAGE_CMPTRIP105_THRESHOLD_MV 3800
 #endif
 
-/* #define DEBUG_IRQS */
+#define DEBUG_IRQS
 
 /* to be re-enabled once FIQ functionality is added */
 #define DISABLE_VDDIO_BO_PROTECTION
