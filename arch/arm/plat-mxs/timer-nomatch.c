@@ -82,6 +82,22 @@ static void
 mxs_nomatch_timrot_set_mode(enum clock_event_mode mode,
 		struct clock_event_device *dev)
 {
+	switch (mode) {
+	case CLOCK_EVT_MODE_PERIODIC:
+		__raw_writel(BM_TIMROT_TIMCTRLn_RELOAD,
+			     online_timer->base + HW_TIMROT_TIMCTRLn_SET(0));
+		break;
+	case CLOCK_EVT_MODE_ONESHOT:
+		__raw_writel(BM_TIMROT_TIMCTRLn_RELOAD,
+			     online_timer->base + HW_TIMROT_TIMCTRLn_CLR(0));
+		break;
+	case CLOCK_EVT_MODE_SHUTDOWN:
+	case CLOCK_EVT_MODE_RESUME:
+	case CLOCK_EVT_MODE_UNUSED:
+		break;
+	default:
+		BUG();
+	}
 }
 
 static struct clock_event_device ckevt_timrot = {
@@ -120,7 +136,7 @@ void mxs_nomatch_timer_init(struct mxs_sys_timer *timer)
 
 	online_timer = timer;
 
-	cksrc_mxs_nomatch.mult = clocksource_hz2mult(clk_get_rate(timer->clk),
+	cksrc_mxs_nomatch.mult = clocksource_hz2mult(clk_get_rate(timer->clk)/4,
 				cksrc_mxs_nomatch.shift);
 	ckevt_timrot.mult = div_sc(clk_get_rate(timer->clk), NSEC_PER_SEC,
 				ckevt_timrot.shift);
@@ -140,7 +156,7 @@ void mxs_nomatch_timer_init(struct mxs_sys_timer *timer)
 		BM_TIMROT_TIMCTRLn_IRQ_EN,
 			online_timer->base + HW_TIMROT_TIMCTRLn(0));
 	__raw_writel(
-		(8 << BP_TIMROT_TIMCTRLn_SELECT) |  /* 32 kHz */
+		(9 << BP_TIMROT_TIMCTRLn_SELECT) |  /* 8 kHz */
 		BM_TIMROT_TIMCTRLn_RELOAD |
 		BM_TIMROT_TIMCTRLn_UPDATE |
 		BM_TIMROT_TIMCTRLn_IRQ_EN,
@@ -177,7 +193,7 @@ void mxs_nomatch_resume_timer(void)
 		BM_TIMROT_TIMCTRLn_IRQ_EN,
 			online_timer->base  + HW_TIMROT_TIMCTRLn(0));
 	__raw_writel(
-		8 << BP_TIMROT_TIMCTRLn_SELECT |  /* 32 kHz */
+		9 << BP_TIMROT_TIMCTRLn_SELECT |  /* 8 kHz */
 		BM_TIMROT_TIMCTRLn_RELOAD |
 		BM_TIMROT_TIMCTRLn_UPDATE |
 		BM_TIMROT_TIMCTRLn_IRQ_EN,
