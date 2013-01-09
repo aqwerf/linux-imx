@@ -66,14 +66,6 @@ static struct mxs_platform_bl_data _bl_data;
 static struct clk *_lcd_clk;
 static struct clk *_pwm_clk;
 
-static int _bl_values[] = {
-	0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100
-};
-
-static int _bl_power[] = {
-	0, 1500, 3600, 6100, 10300, 15500, 74200, 114200, 155200, 190100, 191000
-};
-
 /*_____________________ Local Declarations __________________________________*/
 
 /*_____________________ internal functions __________________________________*/
@@ -583,6 +575,12 @@ static struct mxs_platform_fb_entry fb_entry = {
 	.bl_data = &_bl_data,
 };
 
+#define _BL_PWM_PERIODn_SETTINGS			\
+		(BF_PWM_PERIODn_CDIV(6) |		\
+		BF_PWM_PERIODn_INACTIVE_STATE(2) |	\
+		BF_PWM_PERIODn_ACTIVE_STATE(3) |	\
+		BF_PWM_PERIODn_PERIOD(100))
+
 static int
 _bl_init(struct mxs_platform_bl_data *data)
 {
@@ -597,14 +595,12 @@ _bl_init(struct mxs_platform_bl_data *data)
 	mxs_reset_block(REGS_PWM_BASE, 1);
 
 	__raw_writel(BF_PWM_ACTIVEn_INACTIVE(0) |
-		     BF_PWM_ACTIVEn_ACTIVE(0),
-		     REGS_PWM_BASE + HW_PWM_ACTIVEn(2));
-	__raw_writel(BF_PWM_PERIODn_CDIV(6) | /* divide by 64 */
-		     BF_PWM_PERIODn_INACTIVE_STATE(2) |	/* low */
-		     BF_PWM_PERIODn_ACTIVE_STATE(3) | /* high */
-		     BF_PWM_PERIODn_PERIOD(599),
-		     REGS_PWM_BASE + HW_PWM_PERIODn(2));
-	__raw_writel(BM_PWM_CTRL_PWM2_ENABLE, REGS_PWM_BASE + HW_PWM_CTRL_SET);
+			BF_PWM_ACTIVEn_ACTIVE(0),
+			REGS_PWM_BASE + HW_PWM_ACTIVEn(2));
+	__raw_writel(_BL_PWM_PERIODn_SETTINGS,
+			REGS_PWM_BASE + HW_PWM_PERIODn(2));
+	__raw_writel(BM_PWM_CTRL_PWM2_ENABLE,
+			REGS_PWM_BASE + HW_PWM_CTRL_SET);
 
 	return 0;
 }
@@ -613,13 +609,10 @@ static void
 _bl_free(struct mxs_platform_bl_data *data)
 {
 	__raw_writel(BF_PWM_ACTIVEn_INACTIVE(0) |
-		     BF_PWM_ACTIVEn_ACTIVE(0),
-		     REGS_PWM_BASE + HW_PWM_ACTIVEn(2));
-	__raw_writel(BF_PWM_PERIODn_CDIV(6) | /* divide by 64 */
-		     BF_PWM_PERIODn_INACTIVE_STATE(2) | /* low */
-		     BF_PWM_PERIODn_ACTIVE_STATE(3) | /* high */
-		     BF_PWM_PERIODn_PERIOD(599),
-		     REGS_PWM_BASE + HW_PWM_PERIODn(2));
+			BF_PWM_ACTIVEn_ACTIVE(0),
+			REGS_PWM_BASE + HW_PWM_ACTIVEn(2));
+	__raw_writel(_BL_PWM_PERIODn_SETTINGS,
+			REGS_PWM_BASE + HW_PWM_PERIODn(2));
 	__raw_writel(BM_PWM_CTRL_PWM2_ENABLE, REGS_PWM_BASE + HW_PWM_CTRL_CLR);
 
 	clk_disable(_pwm_clk);
@@ -627,71 +620,24 @@ _bl_free(struct mxs_platform_bl_data *data)
 }
 
 static int
-_bl_to_power(int br)
-{
-	int base;
-	int rem;
-
-	if (br > 100)
-		br = 100;
-	base = _bl_power[br / 10];
-	rem = br % 10;
-
-	if (!rem)
-		return base;
-	else
-		return base + (rem * (_bl_power[br / 10 + 1]) - base) / 10;
-}
-
-static int
 _bl_set_intensity(struct mxs_platform_bl_data *data,
 		struct backlight_device *bd, int suspended)
 {
 	int intensity = bd->props.brightness;
-	int scaled_int;
 
-	if (bd->props.power != FB_BLANK_UNBLANK)
-		intensity = 0;
-	if (bd->props.fb_blank != FB_BLANK_UNBLANK)
-		intensity = 0;
-	if (suspended)
+	if (bd->props.power != FB_BLANK_UNBLANK ||
+			bd->props.fb_blank != FB_BLANK_UNBLANK ||
+			suspended)
 		intensity = 0;
 
-	/*
-	 * This is not too cool but what can we do?
-	 * Luminance changes non-linearly...
-	 */
-	if (regulator_set_current_limit
-			(data->regulator,
-			 _bl_to_power(intensity),
-			 _bl_to_power(intensity)))
-		return -EBUSY;
+	if (intensity > 100)
+		intensity = 100;
 
-	scaled_int = _bl_values[intensity / 10];
-
-	if (scaled_int < 100) {
-		int rem = intensity - 10 * (intensity / 10); /* r = i % 10; */
-
-		scaled_int += rem * (_bl_values[intensity / 10 + 1] -
-				_bl_values[intensity / 10]) / 10;
-	}
-
-	__raw_writel(BF_PWM_ACTIVEn_INACTIVE(scaled_int) |
+	__raw_writel(BF_PWM_ACTIVEn_INACTIVE(intensity) |
 			BF_PWM_ACTIVEn_ACTIVE(0),
 			REGS_PWM_BASE + HW_PWM_ACTIVEn(2));
-	if (scaled_int >= 99) {
-		__raw_writel(BF_PWM_PERIODn_CDIV(6) | /* divide by 64 */
-				BF_PWM_PERIODn_INACTIVE_STATE(3) | /* high */
-				BF_PWM_PERIODn_ACTIVE_STATE(3) | /* high */
-				BF_PWM_PERIODn_PERIOD(399),
-				REGS_PWM_BASE + HW_PWM_PERIODn(2));
-	} else {
-		__raw_writel(BF_PWM_PERIODn_CDIV(6) | /* divide by 64 */
-				BF_PWM_PERIODn_INACTIVE_STATE(2) | /* low */
-				BF_PWM_PERIODn_ACTIVE_STATE(3) | /* high */
-				BF_PWM_PERIODn_PERIOD(399),
-				REGS_PWM_BASE + HW_PWM_PERIODn(2));
-	}
+	__raw_writel(_BL_PWM_PERIODn_SETTINGS,
+			REGS_PWM_BASE + HW_PWM_PERIODn(2));
 
 	return 0;
 }
