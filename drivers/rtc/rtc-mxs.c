@@ -284,7 +284,7 @@ out_irq_sample:
 	free_irq(rtc_data->irq_alarm, &pdev->dev);
 out_irq_alarm:
 	__raw_writel(BM_RTC_CTRL_ONEMSEC_IRQ_EN | BM_RTC_CTRL_ALARM_IRQ_EN,
-			rtc_data->base + HW_RTC_CTRL);
+			rtc_data->base + HW_RTC_CTRL_CLR);
 	rtc_device_unregister(rtc_data->rtc);
 	kfree(rtc_data);
 
