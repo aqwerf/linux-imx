@@ -164,6 +164,8 @@ static void mx23_standby(void)
 	__raw_writel(BM_POWER_MINPWR_EN_DC_PFM,
 		REGS_POWER_BASE + HW_POWER_MINPWR_SET);
 
+	__raw_writel(BM_ICOLL_CTRL_CLKGATE,
+			IO_ADDRESS(ICOLL_PHYS_ADDR) + HW_ICOLL_CTRL_CLR);
 	__raw_writel(BM_CLKCTRL_CPU_INTERRUPT_WAIT,
 		REGS_CLKCTRL_BASE + HW_CLKCTRL_CPU_SET);
 	/* Power off ... */
@@ -172,6 +174,8 @@ static void mx23_standby(void)
 	__raw_writel(BM_CLKCTRL_CPU_INTERRUPT_WAIT,
 			REGS_CLKCTRL_BASE + HW_CLKCTRL_CPU_CLR);
 
+	__raw_writel(BM_ICOLL_CTRL_CLKGATE,
+			IO_ADDRESS(ICOLL_PHYS_ADDR) + HW_ICOLL_CTRL_SET);
 	/* Enable PLL */
 	__raw_writel(BM_CLKCTRL_PLLCTRL0_POWER,
 		REGS_CLKCTRL_BASE + HW_CLKCTRL_PLLCTRL0_SET);
@@ -279,6 +283,8 @@ static inline void do_standby(void)
 	memcpy(iram_virtual_addr, mx23_standby,
 			MAX_POWEROFF_CODE_SIZE);
 
+	__raw_writel(BM_ICOLL_CTRL_CLKGATE,
+			IO_ADDRESS(ICOLL_PHYS_ADDR) + HW_ICOLL_CTRL_SET);
 	/* now switch the CPU to ref_xtal */
 	cpu_clk = clk_get(NULL, "cpu");
 	osc_clk = clk_get(NULL, "ref_xtal");
@@ -349,6 +355,8 @@ static inline void do_standby(void)
 	clk_put(pll_clk);
 	clk_put(osc_clk);
 	clk_put(cpu_clk);
+	__raw_writel(BM_ICOLL_CTRL_CLKGATE,
+			IO_ADDRESS(ICOLL_PHYS_ADDR) + HW_ICOLL_CTRL_CLR);
 
 	iram_free(iram_phy_addr, MAX_POWEROFF_CODE_SIZE);
 }
