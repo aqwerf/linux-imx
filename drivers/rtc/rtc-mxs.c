@@ -37,6 +37,8 @@ struct mxs_rtc_data {
 	int irq_alarm;
 	int irq_sample;
 	unsigned irq_count;
+	u32 last_ms;
+	struct timespec last_ts;
 };
 
 /* Time read/write */
@@ -318,17 +320,35 @@ static int mxs_rtc_suspend(struct platform_device *dev, pm_message_t state)
 				rtc_data->base + HW_RTC_CTRL_SET);
 	}
 #endif
+
+	rtc_data->last_ms = __raw_readl(rtc_data->base + HW_RTC_MILLISECONDS);
+	getnstimeofday(&rtc_data->last_ts);
+
 	return 0;
 }
 
 static int mxs_rtc_resume(struct platform_device *dev)
 {
+	u32 ms;
+	int diff;
+	struct timespec ts;
 	struct mxs_rtc_data *rtc_data = platform_get_drvdata(dev);
 
 	__raw_writel(BM_RTC_PERSISTENT0_ALARM_EN |
 			BM_RTC_PERSISTENT0_ALARM_WAKE_EN |
 			BM_RTC_PERSISTENT0_ALARM_WAKE,
 		     rtc_data->base + HW_RTC_PERSISTENT0_CLR);
+
+	ms = __raw_readl(rtc_data->base + HW_RTC_MILLISECONDS);
+	diff = ms - rtc_data->last_ms;
+
+	ts.tv_sec += diff / 1000;
+	ts.tv_nsec += (diff % 1000) * 1000000;
+	set_normalized_timespec(&ts,
+				rtc_data->last_ts.tv_sec + (diff / 1000),
+				rtc_data->last_ts.tv_nsec +
+				((diff % 1000) * 1000000));
+	do_settimeofday(&ts);
 	return 0;
 }
 #else
