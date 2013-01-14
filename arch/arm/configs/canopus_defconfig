@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.3
-# Wed Dec  5 22:50:23 2012
+# Mon Jan 14 20:22:15 2013
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -873,8 +873,6 @@ CONFIG_DEVKMEM=y
 # CONFIG_N_GSM is not set
 CONFIG_MXS_VIIM=y
 
-CONFIG_CANOPUS_JACK=y
-
 #
 # Serial drivers
 #
@@ -903,6 +901,7 @@ CONFIG_HW_RANDOM=y
 # CONFIG_RAW_DRIVER is not set
 # CONFIG_TCG_TPM is not set
 # CONFIG_RAMOOPS is not set
+CONFIG_CANOPUS_JACK=y
 # CONFIG_I2C is not set
 # CONFIG_SPI is not set
 
@@ -1273,8 +1272,7 @@ CONFIG_LEDS_MXS=y
 # CONFIG_ACCESSIBILITY is not set
 CONFIG_RTC_LIB=y
 CONFIG_RTC_CLASS=y
-CONFIG_RTC_HCTOSYS=y
-CONFIG_RTC_HCTOSYS_DEVICE="rtc0"
+# CONFIG_RTC_HCTOSYS is not set
 # CONFIG_RTC_DEBUG is not set
 
 #
@@ -1286,7 +1284,6 @@ CONFIG_RTC_INTF_PROC=y
 CONFIG_RTC_INTF_DEV=y
 # CONFIG_RTC_INTF_DEV_UIE_EMUL is not set
 # CONFIG_RTC_INTF_ALARM is not set
-# CONFIG_RTC_INTF_ALARM_DEV is not set
 # CONFIG_RTC_DRV_TEST is not set
 
 #
