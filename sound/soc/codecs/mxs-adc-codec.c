@@ -41,6 +41,7 @@
 #include <mach/regs-audioin.h>
 #include <mach/regs-audioout.h>
 #include <mach/regs-rtc.h>
+#include <mach/device.h>
 
 #include "mxs-adc-codec.h"
 
@@ -825,19 +826,18 @@ mxs_codec_adc_power_on(struct mxs_codec_priv *mxs_adc)
 		      REGS_AUDIOIN_BASE + HW_AUDIOIN_ADCVOL_SET);
 
 	/* Supply bias voltage to microphone */
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	mxs_audio_mic_bias_control(0);
+#else
 	__raw_writel(BF(1, AUDIOIN_MICLINE_MIC_RESISTOR),
 		      REGS_AUDIOIN_BASE + HW_AUDIOIN_MICLINE_SET);
 	__raw_writel(BM_AUDIOIN_MICLINE_MIC_SELECT,
 		      REGS_AUDIOIN_BASE + HW_AUDIOIN_MICLINE_SET);
-#ifdef CONFIG_MACH_MX23_CANOPUS
-	__raw_writel(BF(3, AUDIOIN_MICLINE_MIC_GAIN),
-		      REGS_AUDIOIN_BASE + HW_AUDIOIN_MICLINE_SET);
-#else
 	__raw_writel(BF(1, AUDIOIN_MICLINE_MIC_GAIN),
 		      REGS_AUDIOIN_BASE + HW_AUDIOIN_MICLINE_SET);
-#endif
 	__raw_writel(BF(7, AUDIOIN_MICLINE_MIC_BIAS),
 		      REGS_AUDIOIN_BASE + HW_AUDIOIN_MICLINE_SET);
+#endif
 
 	/* Set max ADC volume */
 	reg = __raw_readl(REGS_AUDIOIN_BASE + HW_AUDIOIN_ADCVOLUME);

@@ -31,15 +31,24 @@
 #include <linux/platform_device.h>
 #include <linux/irq.h>
 #include <linux/poll.h>
+#include <linux/delay.h>
 
 #include <mach/device.h>
 
 /*_____________________ Constants Definitions _______________________________*/
 
-#define MXS_RECEIVER_AMP_ON		_IOW('F', 0, int)
-#define MXS_RECEIVER_AMP_OFF		_IOW('F', 1, int)
+#define MXS_JACK_PATH		_IOW('P', 0, int)
+#define MXS_JACK_HEADSET_MIC	_IOW('P', 1, int)
 
 /*_____________________ Type definitions ____________________________________*/
+
+enum {
+	_JACK_PATH_FLOAT = -1,
+	_JACK_PATH_SPEAKER = 0,
+	_JACK_PATH_HEADSET,
+	_JACK_PATH_HANDSET,
+	_JACK_PATH_BOTH,
+};
 
 /*_____________________ Imported Variables __________________________________*/
 
@@ -101,24 +110,54 @@ static unsigned int jack_poll(struct file *f, struct poll_table_struct *p)
 static int jack_ioctl(struct inode *inode, struct file *file,
 		unsigned int cmd, unsigned long arg)
 {
-	int ret = 0;
-	int set;
+	int path = 0;
+	int val = 0;
 
-	if (_IOC_TYPE(cmd) != 'F')
+	if (_IOC_TYPE(cmd) != 'P')
 		return -ENOTTY;
 
-	switch (cmd) {
-	case MXS_RECEIVER_AMP_ON:
-		mxs_audio_receiver_amp_gpio_set(1);
-		break;
-	case MXS_RECEIVER_AMP_OFF:
-		mxs_audio_receiver_amp_gpio_set(0);
-		break;
-	default:
-		break;
+	if (cmd == MXS_JACK_PATH) {
+		if (get_user(path, (int __user *)arg))
+			return -EFAULT;
+
+		switch (path) {
+		case _JACK_PATH_HANDSET:
+			mxs_audio_mic_bias_control(0);
+			mxs_audio_headset_mic_detect_amp_gpio_set(0);
+			mxs_audio_receiver_amp_gpio_set(1);
+			break;
+		case _JACK_PATH_HEADSET:
+			mxs_audio_mic_bias_control(1);
+			mxs_audio_headset_mic_detect_amp_gpio_set(1);
+			mxs_audio_receiver_amp_gpio_set(0);
+			break;
+		case _JACK_PATH_BOTH:
+		case _JACK_PATH_SPEAKER:
+		case _JACK_PATH_FLOAT:
+		default:
+			mxs_audio_receiver_amp_gpio_set(0);
+			mxs_audio_mic_bias_control(0);
+			mxs_audio_headset_mic_detect_amp_gpio_set(0);
+			break;
+		}
+	} else if (cmd == MXS_JACK_HEADSET_MIC) {
+		mxs_audio_mic_bias_control(1);
+		mxs_audio_headset_mic_detect_amp_gpio_set(1);
+
+		mdelay(500);
+
+		if (mxs_audio_headset_mic_status_gpio_get())
+			mxs_audio_mic_bias_control(0); /* use internal mic */
+		else
+			val = 1;
+
+		if (copy_to_user((int *) arg, &val, sizeof(int)))
+			return -EFAULT;
+
+		return 0;
 	}
 
-	return ret;
+	return -ENOIOCTLCMD;
 }
 
 static const struct file_operations fops = {

@@ -41,6 +41,8 @@
 #include <mach/lradc.h>
 #include <mach/lcdif.h>
 #include <mach/ddi_bc.h>
+#include <mach/regs-audioin.h>
+#include <mach/regs-audioout.h>
 
 #include "device.h"
 #include "mx23_pins.h"
@@ -406,7 +408,7 @@ static struct mxskbd_keypair keyboard_data[] = {
 static struct mxs_kbd_plat_data mxs_kbd_data = {
 	.keypair = keyboard_data,
 	.keypair_offset = 8,
-	.channel1 = LRADC_CH0,
+	.channel1 = LRADC_CH5,
 	.channel2 = LRADC_CH3,
 	.channel3 = LRADC_CH4,
 };
@@ -419,8 +421,8 @@ static struct resource mx23_kbd_res[] = {
 	 },
 	{
 	 .flags = IORESOURCE_IRQ,
-	 .start = IRQ_LRADC_CH0,
-	 .end   = IRQ_LRADC_CH0,
+	 .start = IRQ_LRADC_CH5,
+	 .end   = IRQ_LRADC_CH5,
 	 },
 	{
 	 .flags = IORESOURCE_IRQ,
@@ -832,6 +834,8 @@ static ddi_bc_Cfg_t battery_data = {
 	.u8DieTempHigh			 = 85,		/* deg centigrade */
 	.u8DieTempLow			 = 75,		/* deg centigrade */
 	.u16DieTempSafeCurrent		 = 0,		/* mA */
+	.monitorBatteryTemp		 = 1,		/* Monitor the battery*/
+	.u8BatteryTempChannel		 = 2,		/* LRADC 2 */
 #else
 	.u16ConditioningCurrent		 = 60,		/* mA */
 	.u32ConditioningTimeout		 = 4*60*60*1000, /* ms (4 hours) */
@@ -846,9 +850,9 @@ static ddi_bc_Cfg_t battery_data = {
 	.u8DieTempHigh			 = 75,		/* deg centigrade */
 	.u8DieTempLow			 = 65,		/* deg centigrade */
 	.u16DieTempSafeCurrent		 = 0,		/* mA */
-#endif
 	.monitorBatteryTemp		 = 0,		/* Monitor the battery*/
 	.u8BatteryTempChannel		 = 1,		/* LRADC 1 */
+#endif
 	.u16BatteryTempHigh		 = 642,		/* Unknown units */
 	.u16BatteryTempLow		 = 497,		/* Unknown units */
 	.u16BatteryTempSafeCurrent	 = 0,		/* mA */
@@ -1152,3 +1156,26 @@ struct mxs_sys_timer mx23_timer = {
 	.clk_sel = BV_TIMROT_TIMCTRLn_SELECT__32KHZ_XTAL,
 	.base = IO_ADDRESS(TIMROT_PHYS_ADDR),
 };
+
+#ifdef CONFIG_MACH_MX23_CANOPUS
+#ifndef BF
+#define BF(value, field) (((value) << BP_##field) & BM_##field)
+#endif
+void
+mxs_audio_mic_bias_control(int sel) /* 0 : int mic bias, 1 : ext mic bias */
+{
+	__raw_writel(BF(2, AUDIOIN_MICLINE_MIC_RESISTOR),
+		      REGS_AUDIOIN_BASE + HW_AUDIOIN_MICLINE_SET);
+	if (sel)
+		__raw_writel(BM_AUDIOIN_MICLINE_MIC_SELECT, /* ADC0 */
+				REGS_AUDIOIN_BASE + HW_AUDIOIN_MICLINE_CLR);
+	else
+		__raw_writel(BM_AUDIOIN_MICLINE_MIC_SELECT, /* ADC1 */
+				REGS_AUDIOIN_BASE + HW_AUDIOIN_MICLINE_SET);
+	__raw_writel(BF(2, AUDIOIN_MICLINE_MIC_GAIN),
+		      REGS_AUDIOIN_BASE + HW_AUDIOIN_MICLINE_SET);
+	__raw_writel(BF(7, AUDIOIN_MICLINE_MIC_BIAS),
+		      REGS_AUDIOIN_BASE + HW_AUDIOIN_MICLINE_SET);
+}
+#endif
+

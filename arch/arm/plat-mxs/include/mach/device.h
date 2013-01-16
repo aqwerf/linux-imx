@@ -75,8 +75,13 @@ extern int mxs_charger_led_red_gpio_set(int set);
 extern int mxs_audio_jack_gpio_irq(void);
 extern int mxs_audio_jack_gpio_get(void);
 extern int mxs_audio_receiver_amp_gpio_set(int set);
+extern int mxs_audio_headset_mic_detect_amp_gpio_set(int set);
+extern int mxs_audio_headset_mic_status_gpio_get(void);
+extern int mxs_lcd_id1_gpio_get(void);
+extern int mxs_lcd_id2_gpio_get(void);
 extern void mxs_wow_irq_enable(void);
 extern void mxs_key_irq_enable(void);
+extern void mxs_audio_mic_bias_control(int sel);
 #endif
 
 struct mxskbd_keypair {

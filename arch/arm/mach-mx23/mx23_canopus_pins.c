@@ -576,6 +576,26 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.output		= 1,
 		.data		= 0,
 	},
+	/* Active High, MIC Detect Amp On Sign */
+	{
+		.name		= "MDET_EN",
+		.id		= PINID_GPMI_D08,
+		.fun		= PIN_GPIO,
+		.voltage	= PAD_3_3V,
+		.drive		= 1,
+		.output		= 1,
+		.data		= 0,
+	},
+	/* After headset is injected, The low input means that Hds mic on */
+	{
+		.name		= "MIC_DET",
+		.id		= PINID_GPMI_D13,
+		.fun		= PIN_GPIO,
+		.voltage	= PAD_3_3V,
+		.drive		= 1,
+		.output		= 0,
+		.data		= 1,
+	},
 	/* Interrupt Input Siganl for Key Pressing */
 	{
 		.name		= "KEY_INT",
@@ -594,6 +614,26 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.name		= "CAL_MODE",
 		.id		= PINID_I2C_SDA,
 		.fun		= PIN_GPIO,
+	},
+	/* LCD Vendor Discriminator */
+	{
+		.name		= "LCD_ID1",
+		.id		= PINID_LCD_HSYNC,
+		.fun		= PIN_GPIO,
+		.voltage	= PAD_3_3V,
+		.drive		= 1,
+		.output		= 0,
+		.data		= 0,
+	},
+	/* LCD Vendor Discriminator */
+	{
+		.name		= "LCD_ID2",
+		.id		= PINID_LCD_VSYNC,
+		.fun		= PIN_GPIO,
+		.voltage	= PAD_3_3V,
+		.drive		= 1,
+		.output		= 0,
+		.data		= 0,
 	},
 };
 
@@ -701,6 +741,18 @@ int mxs_audio_receiver_amp_gpio_set(int set)
 	return 0;
 }
 
+int mxs_audio_headset_mic_detect_amp_gpio_set(int set)
+{
+	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_D08), set);
+
+	return 0;
+}
+
+int mxs_audio_headset_mic_status_gpio_get(void)
+{
+	return gpio_get_value(MXS_PIN_TO_GPIO(PINID_GPMI_D13));
+}
+
 int mxs_charger_led_green_gpio_set(int set)
 {
 	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_D10), set);
@@ -713,6 +765,16 @@ int mxs_charger_led_red_gpio_set(int set)
 	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_RDY1), set);
 
 	return 0;
+}
+
+int mxs_audio_lcd_id1_gpio_get(void)
+{
+	return gpio_get_value(MXS_PIN_TO_GPIO(PINID_LCD_HSYNC));
+}
+
+int mxs_audio_lcd_id2_gpio_get(void)
+{
+	return gpio_get_value(MXS_PIN_TO_GPIO(PINID_LCD_VSYNC));
 }
 
 void mxs_wow_irq_enable(void)
