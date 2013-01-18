@@ -1164,7 +1164,7 @@ struct mxs_sys_timer mx23_timer = {
 void
 mxs_audio_mic_bias_control(int sel) /* 0 : int mic bias, 1 : ext mic bias */
 {
-	__raw_writel(BF(2, AUDIOIN_MICLINE_MIC_RESISTOR),
+	__raw_writel(BF(1, AUDIOIN_MICLINE_MIC_RESISTOR),
 		      REGS_AUDIOIN_BASE + HW_AUDIOIN_MICLINE_SET);
 	if (sel)
 		__raw_writel(BM_AUDIOIN_MICLINE_MIC_SELECT, /* ADC0 */
