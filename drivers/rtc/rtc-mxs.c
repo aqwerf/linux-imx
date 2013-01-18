@@ -341,14 +341,13 @@ static int mxs_rtc_resume(struct platform_device *dev)
 
 	ms = __raw_readl(rtc_data->base + HW_RTC_MILLISECONDS);
 	diff = ms - rtc_data->last_ms;
-
-	ts.tv_sec += diff / 1000;
-	ts.tv_nsec += (diff % 1000) * 1000000;
-	set_normalized_timespec(&ts,
-				rtc_data->last_ts.tv_sec + (diff / 1000),
-				rtc_data->last_ts.tv_nsec +
-				((diff % 1000) * 1000000));
-	do_settimeofday(&ts);
+	if (diff > 0) {
+		set_normalized_timespec(&ts,
+					rtc_data->last_ts.tv_sec + (diff/1000),
+					rtc_data->last_ts.tv_nsec +
+					((diff % 1000) * 1000000));
+		do_settimeofday(&ts);
+	}
 	return 0;
 }
 #else
