@@ -377,6 +377,9 @@ static int mxs_pcm_close(struct snd_pcm_substream *substream)
 	static LIST_HEAD(list);
 	mxs_dma_disable(prtd->dma_ch);
 
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	mdelay(100);
+#else
 	/* Wait until the DMA chain is finished. */
 	while (mxs_dma_read_semaphore(prtd->dma_ch)) {
 		if (!timeo--)
@@ -386,6 +389,7 @@ static int mxs_pcm_close(struct snd_pcm_substream *substream)
 	}
 	if (timeo <= 0)
 		pr_warn("Is the DMA channel dead?\n");
+#endif
 
 	/* Free DMA irq */
 	free_irq(prtd->params->irq, substream);

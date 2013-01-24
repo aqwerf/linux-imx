@@ -267,7 +267,9 @@ static int pga_event(struct snd_soc_dapm_widget *w,
 			REGS_AUDIOOUT_BASE + HW_AUDIOOUT_ANACTRL_SET);
 		__raw_writel(BM_RTC_PERSISTENT0_RELEASE_GND,
 			REGS_RTC_BASE + HW_RTC_PERSISTENT0_SET);
+#ifndef CONFIG_MACH_MX23_CANOPUS
 		msleep(100);
+#endif
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		__raw_writel(BM_AUDIOOUT_ANACTRL_HP_HOLD_GND,
@@ -288,7 +290,9 @@ static int adc_event(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_PRE_PMU:
 		__raw_writel(BM_RTC_PERSISTENT0_RELEASE_GND,
 			REGS_RTC_BASE + HW_RTC_PERSISTENT0_SET);
+#ifndef CONFIG_MACH_MX23_CANOPUS
 		msleep(100);
+#endif
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		__raw_writel(BM_RTC_PERSISTENT0_RELEASE_GND,
@@ -551,6 +555,12 @@ static int mxs_codec_dig_mute(struct snd_soc_dai *dai, int mute)
 		reg1 = reg & ~BM_AUDIOOUT_DACVOLUME_VOLUME_LEFT;
 		reg1 = reg1 & ~BM_AUDIOOUT_DACVOLUME_VOLUME_RIGHT;
 
+#ifdef CONFIG_MACH_MX23_CANOPUS
+		reg2 = reg1 | BF_AUDIOOUT_DACVOLUME_VOLUME_LEFT(DAC_VOLUME_MIN)
+			| BF_AUDIOOUT_DACVOLUME_VOLUME_RIGHT(DAC_VOLUME_MIN);
+		__raw_writel(reg2,
+				REGS_AUDIOOUT_BASE + HW_AUDIOOUT_DACVOLUME);
+#else
 		l = (reg & BM_AUDIOOUT_DACVOLUME_VOLUME_LEFT) >>
 			BP_AUDIOOUT_DACVOLUME_VOLUME_LEFT;
 		r = (reg & BM_AUDIOOUT_DACVOLUME_VOLUME_RIGHT) >>
@@ -568,6 +578,7 @@ static int mxs_codec_dig_mute(struct snd_soc_dai *dai, int mute)
 				REGS_AUDIOOUT_BASE + HW_AUDIOOUT_DACVOLUME);
 			msleep(1);
 		}
+#endif
 
 		__raw_writel(dac_mask,
 			REGS_AUDIOOUT_BASE + HW_AUDIOOUT_DACVOLUME_SET);

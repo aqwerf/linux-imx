@@ -121,6 +121,18 @@ static void mxs_adc_ramp_work(struct work_struct *work)
 
 	reg1 = reg & ~BM_AUDIOIN_ADCVOLUME_VOLUME_LEFT;
 	reg1 = reg1 & ~BM_AUDIOIN_ADCVOLUME_VOLUME_RIGHT;
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	l = (reg & BM_AUDIOIN_ADCVOLUME_VOLUME_LEFT) >>
+		BP_AUDIOIN_ADCVOLUME_VOLUME_LEFT;
+	r = (reg & BM_AUDIOIN_ADCVOLUME_VOLUME_RIGHT) >>
+		BP_AUDIOIN_ADCVOLUME_VOLUME_RIGHT;
+
+	reg2 = reg1 |
+		BF_AUDIOIN_ADCVOLUME_VOLUME_LEFT(l) |
+		BF_AUDIOIN_ADCVOLUME_VOLUME_RIGHT(r);
+	__raw_writel(reg2,
+			REGS_AUDIOIN_BASE + HW_AUDIOIN_ADCVOLUME);
+#else
 	/* minimize adc volume */
 	reg2 = reg1 |
 	    BF_AUDIOIN_ADCVOLUME_VOLUME_LEFT(ADC_VOLUME_MIN) |
@@ -146,6 +158,7 @@ static void mxs_adc_ramp_work(struct work_struct *work)
 		    REGS_AUDIOIN_BASE + HW_AUDIOIN_ADCVOLUME);
 		msleep(1);
 	}
+#endif
 	adc_ramp_done = 1;
 }
 
@@ -179,6 +192,12 @@ static void mxs_dac_ramp_work(struct work_struct *work)
 		BP_AUDIOOUT_HPVOL_VOL_LEFT;
 	r = (reg & BM_AUDIOOUT_HPVOL_VOL_RIGHT) >>
 		BP_AUDIOOUT_HPVOL_VOL_RIGHT;
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	reg = reg1 | BF_AUDIOOUT_HPVOL_VOL_LEFT(l)
+		| BF_AUDIOOUT_HPVOL_VOL_RIGHT(r);
+	__raw_writel(reg,
+			REGS_AUDIOOUT_BASE + HW_AUDIOOUT_HPVOL);
+#else
 	/* fade in hp vol */
 	for (i = 0x7f; i > 0 ;) {
 		i -= 0x8;
@@ -190,6 +209,7 @@ static void mxs_dac_ramp_work(struct work_struct *work)
 			REGS_AUDIOOUT_BASE + HW_AUDIOOUT_HPVOL);
 		msleep(1);
 	}
+#endif
 	dac_ramp_done = 1;
 }
 
@@ -292,8 +312,9 @@ static int mxs_adc_trigger(struct snd_pcm_substream *substream,
 
 		    __raw_writel(BM_AUDIOIN_CTRL_RUN,
 			REGS_AUDIOIN_BASE + HW_AUDIOIN_CTRL_SET);
+#ifndef CONFIG_MACH_MX23_CANOPUS
 		    udelay(100);
-
+#endif
 		    mxs_dma_get_info(prtd->dma_ch, &dma_info);
 		    cur_bar2 = dma_info.buf_addr;
 		    xfer_count2 = dma_info.xfer_count;
@@ -321,7 +342,9 @@ static int mxs_adc_trigger(struct snd_pcm_substream *substream,
 			/* disable the fifo error interrupt */
 			__raw_writel(BM_AUDIOOUT_CTRL_FIFO_ERROR_IRQ_EN,
 				REGS_AUDIOOUT_BASE + HW_AUDIOOUT_CTRL_CLR);
+#ifndef CONFIG_MACH_MX23_CANOPUS
 			mdelay(50);
+#endif
 		} else {
 			if (adc_ramp_done == 0) {
 				cancel_delayed_work(&adc_ramp_work);
