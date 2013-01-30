@@ -378,7 +378,8 @@ static int mxs_pcm_close(struct snd_pcm_substream *substream)
 	mxs_dma_disable(prtd->dma_ch);
 
 #ifdef CONFIG_MACH_MX23_CANOPUS
-	mdelay(100);
+	/* for remove pop noise */
+	mdelay(50);
 #else
 	/* Wait until the DMA chain is finished. */
 	while (mxs_dma_read_semaphore(prtd->dma_ch)) {
@@ -395,6 +396,9 @@ static int mxs_pcm_close(struct snd_pcm_substream *substream)
 	free_irq(prtd->params->irq, substream);
 	mxs_dma_get_cooked(prtd->dma_ch, &list);
 	/* Free DMA channel*/
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	mxs_dma_reset(prtd->dma_ch);
+#endif
 	for (desc = 0; desc < desc_num; desc++)
 		mxs_dma_free_desc(prtd->dma_desc_array[desc]);
 	mxs_dma_release(prtd->dma_ch, mxs_pcm_dev);
