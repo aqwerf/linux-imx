@@ -43,6 +43,7 @@
 
 #define _LCD_BYD		0
 #define _LCD_TCL		1
+#define _LCD_TCL_NEW		2
 
 #define _H_ACTIVE		176
 #define _V_ACTIVE		220
@@ -337,6 +338,56 @@ _lcd_panel_init_tcl(void)
 	_lcd_panel_pair_write(0x0007, 0x1017);
 }
 
+static void
+_lcd_panel_init_tcl_new(void)
+{
+	/* Display Control Setting */
+	_lcd_panel_pair_write(0x0001, 0x011C);
+	_lcd_panel_pair_write(0x0002, 0x0100);
+	_lcd_panel_pair_write(0x0003, 0x1030);
+	_lcd_panel_pair_write(0x0008, 0x0808);
+	_lcd_panel_pair_write(0x000C, 0x0000);
+	_lcd_panel_pair_write(0x000F, 0x0001);
+	_lcd_panel_pair_write(0x0020, 0x0000);
+	_lcd_panel_pair_write(0x0021, 0x0000);
+	/* Power Control Registers Initial */
+	_lcd_panel_pair_write(0x0010, 0x0000);
+	_lcd_panel_pair_write(0x0011, 0x1000);
+	mdelay(100);
+	/* Start Display Windows 176*220 */
+	_lcd_panel_pair_write(0x0030, 0x0000);
+	_lcd_panel_pair_write(0x0031, 0x00DB);
+	_lcd_panel_pair_write(0x0032, 0x0000);
+	_lcd_panel_pair_write(0x0033, 0x0000);
+	_lcd_panel_pair_write(0x0034, 0x00DB);
+	_lcd_panel_pair_write(0x0035, 0x0000);
+	_lcd_panel_pair_write(0x0036, 0x00AF);
+	_lcd_panel_pair_write(0x0037, 0x0000);
+	_lcd_panel_pair_write(0x0038, 0x00DB);
+	_lcd_panel_pair_write(0x0039, 0x0000);
+	/* End Display Windows 176*220 */
+	mdelay(10);
+	_lcd_panel_pair_write(0x00FF, 0x0003);
+	/* Start Gamma Cluster setting */
+	_lcd_panel_pair_write(0x0050, 0x0103); /* KP1[2:0];KP1[2:0]; */
+	_lcd_panel_pair_write(0x0051, 0x0808); /* KP3[3:0];KP2[3:0]; */
+	_lcd_panel_pair_write(0x0052, 0x0207); /* KP5[3:0];KP4[3:0]; */
+	_lcd_panel_pair_write(0x0053, 0x2222);
+	_lcd_panel_pair_write(0x0054, 0x0703); /* VOS0P[3:0];VRF0P[3:0]; */
+	_lcd_panel_pair_write(0x0055, 0x0103); /* KN1[2:0];KN1[2:0]; */
+	_lcd_panel_pair_write(0x0056, 0x0808); /* KN3[3:0];KN2[3:0]; */
+	_lcd_panel_pair_write(0x0057, 0x0207); /* KN5[3:0];KN4[3:0]; */
+	_lcd_panel_pair_write(0x0058, 0x2222);
+	_lcd_panel_pair_write(0x0059, 0x0603); /* VOS0N[3:0];VRF0N[3:0]; */
+	/* End Gamma setting */
+	/* Start Vcom Setting */
+	_lcd_panel_pair_write(0x00B0, 0x1201);
+	/* End Vcom Setting */
+	_lcd_panel_pair_write(0x00FF, 0x0000);
+	_lcd_panel_pair_write(0x0007, 0x1017);
+	mdelay(20);
+}
+
 static int
 _lcd_panel_init(int type)
 {
@@ -348,6 +399,9 @@ _lcd_panel_init(int type)
 		break;
 	case _LCD_TCL:
 		_lcd_panel_init_tcl();
+		break;
+	case _LCD_TCL_NEW:
+		_lcd_panel_init_tcl_new();
 		break;
 	default:
 		ret = -1;
@@ -376,7 +430,7 @@ _lcd_panel_power(int set, dma_addr_t phys)
 		mdelay(50);
 
 		/* for external LCD */
-		_lcd_panel_init(_LCD_TCL);
+		_lcd_panel_init(_LCD_TCL_NEW);
 		_lcd_panel_set_prepare(0, 0);
 		mdelay(2);
 
@@ -485,7 +539,7 @@ _lcdif_init_panel(struct device *dev, dma_addr_t phys, int memsize,
 		mdelay(50);
 		
 		/* for external LCD */
-		_lcd_panel_init(_LCD_TCL);
+		_lcd_panel_init(_LCD_TCL_NEW);
 
 		ili9225b_lcdif_dma_send(phys);
 	} else {
