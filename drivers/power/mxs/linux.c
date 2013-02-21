@@ -987,10 +987,9 @@ static void state_machine_work(struct work_struct *work)
 	check_and_handle_5v_connection(info);
 
 #ifdef MXS_CANOPUS_LOG_ENABLE
-	static unsigned long i;
 	int timeout = mxs_log_charge_get_timeout();
 
-	if (timeout && !(i++ % (10 * timeout)))
+	if (timeout)
 		mxs_log_charge_update(1);
 #endif
 
@@ -1690,6 +1689,11 @@ static int mxs_bat_resume(struct platform_device *pdev)
 		  jiffies + msecs_to_jiffies(cfg->u32StateMachinePeriod));
 
 	mutex_unlock(&info->sm_lock);
+
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_lock_timeout(&_charger_wake_lock, 50);
+#endif
+
 	return 0;
 }
 

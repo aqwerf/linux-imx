@@ -54,12 +54,13 @@ void mxs_log_write(char *filename, char *str)
 }
 
 #define _FILE_NAME "/udp-flash/log_charge.txt"
-#define _LOG_TITLE "Time,Mode,Voltage,Status(core),Status(ui),Broken,DieTemp"
+#define _LOG_TITLE "Time,Mode,Count,Voltage,Status(core),Status(ui),Broken,DieTemp"
 
 /* for state backup */
 static ddi_bc_State_t _state = -1;
 /* for start time(s) */
 static __kernel_time_t _time;
+static __kernel_time_t _gi_time;
 /* for enable log and auto timeout(s) */
 static int _timeout;
 
@@ -75,6 +76,7 @@ int mxs_log_charge_get_timeout(void)
 
 void mxs_log_charge_update(int mode) /* 0 : event, 1 : auto */
 {
+	static unsigned long count;
 	char log[100];
 	struct timespec ts;
 	struct rtc_time tm;
@@ -88,6 +90,7 @@ void mxs_log_charge_update(int mode) /* 0 : event, 1 : auto */
 
 	if (_state == -1) {
 		_time = ts.tv_sec;
+		_gi_time = ts.tv_sec;
 		rtc_time_to_tm(ts.tv_sec, &tm);
 		sprintf(log, "%d-%02d-%02d %02d:%02d:%02d,,,,,,\n%s\n",
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
@@ -99,13 +102,18 @@ void mxs_log_charge_update(int mode) /* 0 : event, 1 : auto */
 	if (!mode && _state == ddi_bc_GetState())
 		return;
 
+	count++;
 	_state = ddi_bc_GetState();
+
+	if (ts.tv_sec - _gi_time < _timeout)
+		return;
 
 	ddi_bc_hwGetDieTemp(&i16Low, &i16High);
 
-	sprintf(log, "%ld,%d,%d.%03d,%d,%d,%d,%d\n",
+	sprintf(log, "%ld,%d,%d,%d.%03d,%d,%d,%d,%d\n",
 			(ts.tv_sec - _time),
 			mode,
+			count,
 			(ddi_power_GetBattery()/1000),
 			(ddi_power_GetBattery()%1000),
 			_state,
@@ -114,5 +122,7 @@ void mxs_log_charge_update(int mode) /* 0 : event, 1 : auto */
 			(i16High - 5)); /* remove margin */
 
 	mxs_log_write(_FILE_NAME, log);
+	_gi_time = ts.tv_sec;
+	count = 0;
 }
 

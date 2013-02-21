@@ -2295,6 +2295,11 @@ static int nand_write(struct mtd_info *mtd, loff_t to, size_t len,
 	struct nand_chip *chip = mtd->priv;
 	int ret;
 
+#ifdef MXS_CANOPUS_LOG_ENABLE
+	if (chip->state == FL_PM_SUSPENDED)
+		nand_release_device(mtd);
+#endif
+
 	/* Do not allow reads past end of device */
 	if ((to + len) > mtd->size)
 		return -EINVAL;
