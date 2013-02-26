@@ -67,7 +67,7 @@ _alarm_triggered_func(void *p)
 	if (!(rtc->irq_data & RTC_AF))
 		return;
 #ifdef CONFIG_HAS_WAKELOCK
-	wake_lock_timeout(&wakers_wake_lock, 5 * HZ);
+	wake_lock_timeout(&wakers_wake_lock, 1 * HZ);
 #endif
 }
 
