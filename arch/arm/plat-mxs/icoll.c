@@ -101,6 +101,28 @@ void __init avic_init_irq(void __iomem *base, int nr_irqs)
 	(void)__raw_readl(g_icoll_base + HW_ICOLL_STAT);
 }
 
+void mxs_reset_icoll(void)
+{
+	int i;
+	u32 _ctrl, _levelack, _vector, _irqs[nr_irqs];
+
+	for (i = 0; i < nr_irqs; i++)
+		_irqs[i] = __raw_readl(g_icoll_base + HW_ICOLL_INTERRUPTn(i));
+
+	_levelack = __raw_readl(g_icoll_base + HW_ICOLL_LEVELACK);
+	_vector = __raw_readl(g_icoll_base + HW_ICOLL_VECTOR);
+	_ctrl = __raw_readl(g_icoll_base + HW_ICOLL_CTRL);
+
+	mxs_reset_block(g_icoll_base + HW_ICOLL_CTRL, 0);
+
+	for (i = 0; i < nr_irqs; i++)
+		__raw_writel(_irqs[i], g_icoll_base + HW_ICOLL_INTERRUPTn(i));
+
+	__raw_writel(_levelack, g_icoll_base + HW_ICOLL_LEVELACK);
+	__raw_writel(_vector, g_icoll_base + HW_ICOLL_VECTOR);
+	__raw_writel(_ctrl, g_icoll_base + HW_ICOLL_CTRL);
+}
+
 void mxs_set_irq_fiq(unsigned int irq, unsigned int type)
 {
 	if (type == 0)
