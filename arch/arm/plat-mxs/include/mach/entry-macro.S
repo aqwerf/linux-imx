@@ -27,6 +27,7 @@
 	ldr \irqnr, [\base, #0x70]
 	cmp \irqnr, #0x7F
 	bne 100f
+#ifdef CONFIG_ARCH_MX28
 	/* If the irq is 0x7F, check the raw bit to see
 	whether it is a real GPIO0 irq */
 	ldr \tmp, [\base, #0xD0]
@@ -37,11 +38,19 @@
 	/* Do a dummy compare to make sure Z = 0 */
 	cmp \tmp, #0xFF
 	b 100f
+#endif
 200:	movs \irqnr, #0
 100:
 	.endm
 
 	.macro  get_irqnr_preamble, base, tmp
+	ldr \base, =g_icoll_base
+	ldr \base, [\base]
+	ldr \tmp, [\base, #0x70]
+	cmp \tmp, #0x7F
+	bne 100f
+	bl mxs_reset_icoll
+100:
 	.endm
 
 	.macro  arch_ret_to_user, tmp1, tmp2
