@@ -983,12 +983,18 @@ static int h_set_rate(struct clk *clk, unsigned long rate)
 	unsigned int reg, div;
 	root_rate = clk->parent->get_rate(clk->parent);
 	round_rate =  h_round_rate(clk, rate);
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	div = root_rate / rate;
+#else
 	div = root_rate / round_rate;
+#endif
 	if ((div == 0) || (div >= 0x20))
 		return -EINVAL;
 
+#ifndef CONFIG_MACH_MX23_CANOPUS
 	if (root_rate % round_rate)
 			return -EINVAL;
+#endif
 
 	reg = __raw_readl(CLKCTRL_BASE_ADDR + HW_CLKCTRL_HBUS);
 	reg &= ~(BM_CLKCTRL_HBUS_DIV_FRAC_EN | BM_CLKCTRL_HBUS_DIV);
