@@ -51,6 +51,8 @@
 #define _DATA			0
 #define _CMD			1
 
+#define _lcd_type()		_LCD_TCL_NEW
+
 #define _lcdif_write(reg, data)	__raw_writel(data, REGS_LCDIF_BASE + reg)
 #define _lcdif_read(reg)	__raw_readl(REGS_LCDIF_BASE + reg)
 
@@ -421,8 +423,6 @@ _lcd_panel_power(int set, dma_addr_t phys)
 		return 0;
 
 	if (set) {
-		_lcd_panel_pair_write(0x0010, 0x0A00);
-
 		/* for external LCD reset */
 		_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_RESET);
 		mdelay(10);
@@ -430,9 +430,7 @@ _lcd_panel_power(int set, dma_addr_t phys)
 		mdelay(50);
 
 		/* for external LCD */
-		_lcd_panel_init(_LCD_TCL_NEW);
-		_lcd_panel_set_prepare(0, 0);
-		mdelay(2);
+		_lcd_panel_init(_lcd_type());
 
 		atomic_set(&_init_panel, set);
 
@@ -440,11 +438,19 @@ _lcd_panel_power(int set, dma_addr_t phys)
 	} else {
 		atomic_set(&_init_panel, set);
 
-		_lcd_panel_pair_write(0x0007, 0x0000);
-		mdelay(50);
-		_lcd_panel_pair_write(0x0011, 0x0007);
-		mdelay(50);
-		_lcd_panel_pair_write(0x0010, 0x0A02);
+		if (_lcd_type() == _LCD_TCL_NEW) {
+			_lcd_panel_pair_write(0x0010, 0x0A02);
+			_lcd_panel_pair_write(0x00ff, 0x0000);
+			_lcd_panel_pair_write(0x0007, 0x0000);
+			mdelay(50);
+			_lcd_panel_pair_write(0x0010, 0x0003);
+			mdelay(20);
+		} else {
+			_lcd_panel_pair_write(0x0007, 0x0000);
+			mdelay(50);
+			_lcd_panel_pair_write(0x0011, 0x0007);
+			mdelay(50);
+		}
 	}
 
 	return 0;
@@ -539,7 +545,7 @@ _lcdif_init_panel(struct device *dev, dma_addr_t phys, int memsize,
 		mdelay(50);
 		
 		/* for external LCD */
-		_lcd_panel_init(_LCD_TCL_NEW);
+		_lcd_panel_init(_lcd_type());
 
 		ili9225b_lcdif_dma_send(phys);
 	} else {
@@ -728,9 +734,10 @@ ili9225b_lcdif_dma_send(dma_addr_t addr)
 	if (!atomic_read(&_init_panel) || addr <= 0)
 		return -1;
 
-	_lcdif_write(HW_LCDIF_CUR_BUF, (uint32_t)addr);
+	while (_lcdif_read(HW_LCDIF_CTRL) & BM_LCDIF_CTRL_RUN)
+		;
 
-	_lcdif_write(HW_LCDIF_CTRL_CLR, BM_LCDIF_CTRL_RUN);
+	_lcdif_write(HW_LCDIF_CUR_BUF, (uint32_t)addr);
 
 	_lcdif_write(HW_LCDIF_CTRL1_CLR,
 		     BM_LCDIF_CTRL1_BYTE_PACKING_FORMAT);
