@@ -24,9 +24,18 @@ config FB_MXS_LCD_LMS430
 config FB_MXS_LCD_ILI9225B
 	depends on FB_MXS
 	bool "ili9225b"
-	default y if ARCH_MX23
+	default n if ARCH_MX23
 	---help---
 	  a-Si TFT LCD Driver 176RGBx220 Resolution and 262K color
+
+config FB_MXS_LCD_ST7789S
+	depends on FB_MXS
+	bool "ST7789S"
+	default y if ARCH_MX23
+	---help---
+	  240RGB x 320 dot 262K Color with Frame Memory
+	  Single-Chip TFT Controller/Driver.
+	  It is default LCD driver of ICW-1000.
 
 config FB_MXS_TVENC
 	depends on ARCH_MXS
