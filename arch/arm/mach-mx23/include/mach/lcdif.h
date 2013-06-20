@@ -159,8 +159,8 @@ void mxs_lcdif_notify_clients(unsigned long event,
 #if defined(CONFIG_FB_MXS_LCD_ILI9225B)
 #define FBIO_CHANGE_FB			_IOW('F', 81, int)
 
-int ili9225b_lcdif_dma_send(dma_addr_t addr);
-int ili9225b_lcd_panel_power(int set, dma_addr_t phys);
+int canopus_lcdif_dma_send(dma_addr_t addr);
+int canopus_lcd_panel_power(int set, dma_addr_t phys);
 #endif
 
 static inline void setup_dotclk_panel(u16 v_pulse_width,

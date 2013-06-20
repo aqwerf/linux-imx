@@ -434,7 +434,7 @@ _lcd_panel_power(int set, dma_addr_t phys)
 
 		atomic_set(&_init_panel, set);
 
-		ili9225b_lcdif_dma_send(phys);
+		canopus_lcdif_dma_send(phys);
 	} else {
 		atomic_set(&_init_panel, set);
 
@@ -547,7 +547,7 @@ _lcdif_init_panel(struct device *dev, dma_addr_t phys, int memsize,
 		/* for external LCD */
 		_lcd_panel_init(_lcd_type());
 
-		ili9225b_lcdif_dma_send(phys);
+		canopus_lcdif_dma_send(phys);
 	} else {
 		_loading_icon_start();
 	}
@@ -729,7 +729,7 @@ subsys_initcall(register_devices);
 /*_____________________ Program Body ________________________________________*/
 
 int
-ili9225b_lcdif_dma_send(dma_addr_t addr)
+canopus_lcdif_dma_send(dma_addr_t addr)
 {
 	if (!atomic_read(&_init_panel) || addr <= 0)
 		return -1;
@@ -760,11 +760,11 @@ ili9225b_lcdif_dma_send(dma_addr_t addr)
 
 	return 0;
 }
-EXPORT_SYMBOL(ili9225b_lcdif_dma_send);
+EXPORT_SYMBOL(canopus_lcdif_dma_send);
 
 int
-ili9225b_lcd_panel_power(int set, dma_addr_t phys)
+canopus_lcd_panel_power(int set, dma_addr_t phys)
 {
 	return _lcd_panel_power(set, phys);
 }
-EXPORT_SYMBOL(ili9225b_lcd_panel_power);
+EXPORT_SYMBOL(canopus_lcd_panel_power);

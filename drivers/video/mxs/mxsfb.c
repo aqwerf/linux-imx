@@ -544,7 +544,7 @@ static int mxsfb_ioctl(struct fb_info *info, unsigned int cmd,
 		if (!cdata)
 			return ret;
 
-		ili9225b_lcdif_dma_send(cdata->phys_start);
+		canopus_lcdif_dma_send(cdata->phys_start);
 		break;
 #endif
 	default:
@@ -701,7 +701,7 @@ static void mxsfb_lcd_power(int to)
 {
 	lcd_power = to;
 
-	ili9225b_lcd_panel_power(to, cdata->phys_start);
+	canopus_lcd_panel_power(to, cdata->phys_start);
 
 #ifdef CONFIG_HAS_WAKELOCK
 	if (to)
