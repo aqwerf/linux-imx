@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.3
-# Mon Jun 17 14:38:24 2013
+# Wed Jun 19 14:50:03 2013
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -1021,7 +1021,8 @@ CONFIG_FB_CFB_IMAGEBLIT=y
 CONFIG_FB_MXS=y
 # CONFIG_FB_MXS_LCD_43WVF1G is not set
 # CONFIG_FB_MXS_LCD_LMS430 is not set
-CONFIG_FB_MXS_LCD_ILI9225B=y
+# CONFIG_FB_MXS_LCD_ILI9225B is not set
+CONFIG_FB_MXS_LCD_ST7789S=y
 # CONFIG_FB_MXS_TVENC is not set
 # CONFIG_FB_S1D13XXX is not set
 # CONFIG_FB_VIRTUAL is not set
