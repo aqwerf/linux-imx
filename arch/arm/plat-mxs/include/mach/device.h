@@ -76,7 +76,6 @@ extern int mxs_audio_jack_gpio_irq(void);
 extern int mxs_audio_jack_gpio_get(void);
 extern int mxs_audio_receiver_amp_gpio_set(int set);
 extern int mxs_audio_headset_mic_detect_amp_gpio_set(int set);
-extern int mxs_audio_headset_mic_status_gpio_get(void);
 extern int mxs_lcd_id1_gpio_get(void);
 extern int mxs_lcd_id2_gpio_get(void);
 extern void mxs_wow_irq_enable(void);

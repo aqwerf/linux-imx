@@ -27,6 +27,16 @@
 
 #include "mx23_pins.h"
 
+#ifdef CONFIG_MXS_AUART2_DEVICE_ENABLE
+#error "Canoupus does not support AUART2"
+#endif
+#if defined(CONFIG_I2C_MXS) || defined(CONFIG_I2C_MXS_MODULE)
+#error "Canoupus does not support I2C"
+#endif
+#if !(defined(CONFIG_FB_MXS_LCD_ILI9225B) || defined(CONFIG_FB_MXS_LCD_ST7789S))
+#error "Canopus board support LCD ILI9225B/ST7789S only."
+#endif
+
 static struct pin_desc canopus_fixed_pins[] = {
 	{
 		.name		= "DUART.RX",
@@ -49,59 +59,6 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.id		= PINID_I2C_SCL,
 		.fun		= PIN_FUN3,
 	},
-	{
-		.name		= "AUART1.CTS",
-		.id		= PINID_AUART1_CTS,
-		.fun		= PIN_FUN1,
-	},
-	{
-		.name		= "AUART1.RTS",
-		.id		= PINID_AUART1_RTS,
-		.fun		= PIN_FUN1,
-	},
-#endif
-#ifdef CONFIG_MXS_AUART2_DEVICE_ENABLE
-	{
-		.name		= "AUART2.RX",
-		.id		= PINID_GPMI_D14,
-		.fun		= PIN_FUN2,
-	},
-	{
-		.name		= "AUART2.TX",
-		.id		= PINID_GPMI_D15,
-		.fun		= PIN_FUN2,
-	},
-	{
-		.name		= "AUART2.CTS",
-		.id		= PINID_ROTARYB,
-		.fun		= PIN_FUN2,
-	},
-	{
-		.name		= "AUART2.RTS",
-		.id		= PINID_ROTARYA,
-		.fun		= PIN_FUN2,
-	},
-#endif
-#if defined(CONFIG_I2C_MXS) || defined(CONFIG_I2C_MXS_MODULE)
-	{
-		.name		= "I2C_SCL",
-		.id		= PINID_I2C_SCL,
-		.fun		= PIN_FUN1,
-		.strength	= PAD_4MA,
-		.voltage	= PAD_3_3V,
-		.drive		= 1,
-	},
-	{
-		.name		= "I2C_SDA",
-		.id		= PINID_I2C_SDA,
-		.fun		= PIN_FUN1,
-		.strength	= PAD_4MA,
-		.voltage	= PAD_3_3V,
-		.drive		= 1,
-	},
-#endif
-#ifndef CONFIG_FB_MXS_LCD_ILI9225B
-#error "Canopus board support LCD ILI9225B only."
 #endif
 #if defined(CONFIG_FB_MXS) || defined(CONFIG_FB_MXS_MODULE)
 	{
@@ -415,7 +372,8 @@ static struct pin_desc canopus_fixed_pins[] = {
 	},
 #endif
 #if defined(CONFIG_MMC_MXS) || defined(CONFIG_MMC_MXS_MODULE)
-	/* Configurations of SSP0 SD/MMC port pins */
+	/* Configurations of SSP0 SD/MMC port pins,
+	 * SSP1_DETECT pin does not used for canpus. */
 	{
 		.name		= "SSP1_DATA0",
 		.id		= PINID_SSP1_DATA0,
@@ -467,16 +425,6 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.pull		= 1,
 	},
 	{
-		.name		= "SSP1_DETECT",
-		.id		= PINID_SSP1_DETECT,
-		.fun		= PIN_FUN1,
-		.strength	= PAD_8MA,
-		.voltage	= PAD_3_3V,
-		.pullup		= 0,
-		.drive		= 1,
-		.pull		= 0,
-	},
-	{
 		.name		= "SSP1_SCK",
 		.id		= PINID_SSP1_SCK,
 		.fun		= PIN_FUN1,
@@ -514,15 +462,6 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.fun		= PIN_GPIO,
 		.irq		= 1,
 	},
-	/* External 24MHz Clock, to use instead of crystal oscillator */
-	{
-		.name		= "ATH6KL_ECLK",
-		.id		= PINID_PWM3,
-		.fun		= PIN_FUN1,
-		.strength	= PAD_8MA,
-		.voltage	= PAD_3_3V,
-		.drive		= 1,
-	},
 	/* Key PAD Backlight LED PWM Control signal */
 	{
 		.name		= "KEY_LED_CTRL",
@@ -535,7 +474,7 @@ static struct pin_desc canopus_fixed_pins[] = {
 	/* Active Low, Charge State_Green LED On/Off Signal */
 	{
 		.name		= "CHGSTS_GLED",
-		.id		= PINID_GPMI_D10,
+		.id		= PINID_SSP1_DETECT,
 		.fun		= PIN_GPIO,
 		.drive		= 0,
 		.output		= 1,
@@ -544,7 +483,7 @@ static struct pin_desc canopus_fixed_pins[] = {
 	/* Active Low, Charge State_RED LED On/Off Signal */
 	{
 		.name		= "CHGSTS_RLED",
-		.id		= PINID_GPMI_RDY1,
+		.id		= PINID_PWM3,
 		.fun		= PIN_GPIO,
 		.drive		= 0,
 		.output		= 1,
@@ -569,7 +508,7 @@ static struct pin_desc canopus_fixed_pins[] = {
 	/* Receiver Amp Enable Signal in the case of Global Model */
 	{
 		.name		= "RCV_EN",
-		.id		= PINID_GPMI_D09,
+		.id		= PINID_GPMI_D13,
 		.fun		= PIN_GPIO,
 		.voltage	= PAD_3_3V,
 		.drive		= 1,
@@ -579,22 +518,12 @@ static struct pin_desc canopus_fixed_pins[] = {
 	/* Active High, MIC Detect Amp On Sign */
 	{
 		.name		= "MDET_EN",
-		.id		= PINID_GPMI_D08,
+		.id		= PINID_GPMI_D12,
 		.fun		= PIN_GPIO,
 		.voltage	= PAD_3_3V,
 		.drive		= 1,
 		.output		= 1,
 		.data		= 0,
-	},
-	/* After headset is injected, The low input means that Hds mic on */
-	{
-		.name		= "MIC_DET",
-		.id		= PINID_GPMI_D13,
-		.fun		= PIN_GPIO,
-		.voltage	= PAD_3_3V,
-		.drive		= 1,
-		.output		= 0,
-		.data		= 1,
 	},
 	/* Interrupt Input Siganl for Key Pressing */
 	{
@@ -602,18 +531,6 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.id		= PINID_GPMI_D11,
 		.fun		= PIN_GPIO,
 		.irq		= 1,
-	},
-	/* Factory Mode Input, Normal Mode=High, Factory Test Mode=Low */
-	{
-		.name		= "FAC_MODE",
-		.id		= PINID_GPMI_D12,
-		.fun		= PIN_GPIO,
-	},
-	/* Cal Mode Control Input, Normal Mode=High, Cal Mode=Low */
-	{
-		.name		= "CAL_MODE",
-		.id		= PINID_I2C_SDA,
-		.fun		= PIN_GPIO,
 	},
 	/* LCD Vendor Discriminator */
 	{
@@ -736,33 +653,28 @@ int mxs_audio_jack_gpio_get(void)
 
 int mxs_audio_receiver_amp_gpio_set(int set)
 {
-	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_D09), set);
+	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_D13), set);
 
 	return 0;
 }
 
 int mxs_audio_headset_mic_detect_amp_gpio_set(int set)
 {
-	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_D08), set);
+	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_D12), set);
 
 	return 0;
 }
 
-int mxs_audio_headset_mic_status_gpio_get(void)
-{
-	return gpio_get_value(MXS_PIN_TO_GPIO(PINID_GPMI_D13));
-}
-
 int mxs_charger_led_green_gpio_set(int set)
 {
-	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_D10), set);
+	gpio_set_value(MXS_PIN_TO_GPIO(PINID_SSP1_DETECT), set);
 
 	return 0;
 }
 
 int mxs_charger_led_red_gpio_set(int set)
 {
-	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_RDY1), set);
+	gpio_set_value(MXS_PIN_TO_GPIO(PINID_PWM3), set);
 
 	return 0;
 }

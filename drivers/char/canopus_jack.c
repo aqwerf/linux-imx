@@ -146,9 +146,15 @@ static int jack_ioctl(struct inode *inode, struct file *file,
 
 		mdelay(500);
 
+#ifdef __FIX_ME__
+		/* Detecting heaset mic of ICW-1000 is different from
+		 * old WPU-8000. ICW-1000 used ADC instead of GPIO
+		 * mic detect pin.
+		 */
 		if (mxs_audio_headset_mic_status_gpio_get())
 			mxs_audio_mic_bias_control(0); /* use internal mic */
 		else
+#endif
 			val = 1;
 
 		if (copy_to_user((int *) arg, &val, sizeof(int)))
