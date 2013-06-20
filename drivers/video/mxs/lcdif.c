@@ -33,7 +33,7 @@
 
 void mxs_init_lcdif(void)
 {
-#if !defined(CONFIG_FB_MXS_LCD_ILI9225B)
+#if !(defined(CONFIG_FB_MXS_LCD_ILI9225B) || defined(CONFIG_FB_MXS_LCD_ST7789S))
 	__raw_writel(BM_LCDIF_CTRL_CLKGATE,
 		     REGS_LCDIF_BASE + HW_LCDIF_CTRL_CLR);
 	/* Reset controller */

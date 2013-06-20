@@ -156,7 +156,7 @@ void mxs_lcdif_notify_clients(unsigned long event,
 #define FBIO_WAITFORVSYNC		_IOW('F', 0x20, u_int32_t)
 #endif
 
-#if defined(CONFIG_FB_MXS_LCD_ILI9225B)
+#if (defined(CONFIG_FB_MXS_LCD_ILI9225B) || defined(CONFIG_FB_MXS_LCD_ST7789S))
 #define FBIO_CHANGE_FB			_IOW('F', 81, int)
 
 int canopus_lcdif_dma_send(dma_addr_t addr);

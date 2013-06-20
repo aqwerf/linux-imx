@@ -88,7 +88,7 @@ static void mxsfb_enable_controller(struct mxs_fb_data *data)
 	if (!data || !data->pdata || !data->pdata->cur)
 		return;
 
-#if !defined(CONFIG_FB_MXS_LCD_ILI9225B)
+#if !(defined(CONFIG_FB_MXS_LCD_ILI9225B) || defined(CONFIG_FB_MXS_LCD_ST7789S))
 	mxs_init_lcdif();
 	init_timings(data);
 #endif
@@ -539,7 +539,7 @@ static int mxsfb_ioctl(struct fb_info *info, unsigned int cmd,
 		if (!get_user(channel, (__u32 __user *) arg))
 			ret = mxsfb_wait_for_vsync(channel, info);
 		break;
-#if defined(CONFIG_FB_MXS_LCD_ILI9225B)
+#if (defined(CONFIG_FB_MXS_LCD_ILI9225B) || defined(CONFIG_FB_MXS_LCD_ST7789S))
 	case FBIO_CHANGE_FB:
 		if (!cdata)
 			return ret;
@@ -620,7 +620,7 @@ static struct fb_ops mxsfb_ops = {
 	.fb_imageblit = cfb_imageblit,
 };
 
-#if !defined(CONFIG_FB_MXS_LCD_ILI9225B)
+#if !(defined(CONFIG_FB_MXS_LCD_ILI9225B) || defined(CONFIG_FB_MXS_LCD_ST7789S))
 static void init_timings(struct mxs_fb_data *data)
 {
 	unsigned phase_time;
@@ -694,7 +694,7 @@ static int get_max_memsize(struct mxs_platform_fb_entry *pentry,
 	return fbdata->mem_size;
 }
 
-#if defined(CONFIG_FB_MXS_LCD_ILI9225B)
+#if (defined(CONFIG_FB_MXS_LCD_ILI9225B) || defined(CONFIG_FB_MXS_LCD_ST7789S))
 static int lcd_power = 1;
 
 static void mxsfb_lcd_power(int to)
@@ -890,7 +890,7 @@ static int __devinit mxsfb_probe(struct platform_device *pdev)
 
 	mxsfb_set_par(info);
 
-#if !defined(CONFIG_FB_MXS_LCD_ILI9225B)
+#if !(defined(CONFIG_FB_MXS_LCD_ILI9225B) || defined(CONFIG_FB_MXS_LCD_ST7789S))
 	mxs_init_lcdif();
 #endif
 	ret = pentry->init_panel(data->dev, data->phys_start,
@@ -900,7 +900,7 @@ static int __devinit mxsfb_probe(struct platform_device *pdev)
 		goto out_panel;
 	}
 	dev_dbg(&pdev->dev, "LCD panel initialized\n");
-#if !defined(CONFIG_FB_MXS_LCD_ILI9225B)
+#if !(defined(CONFIG_FB_MXS_LCD_ILI9225B) || defined(CONFIG_FB_MXS_LCD_ST7789S))
 	init_timings(data);
 #endif
 
@@ -914,7 +914,7 @@ static int __devinit mxsfb_probe(struct platform_device *pdev)
 	if (ret)
 		goto out_irq;
 
-#if defined(CONFIG_FB_MXS_LCD_ILI9225B)
+#if (defined(CONFIG_FB_MXS_LCD_ILI9225B) || defined(CONFIG_FB_MXS_LCD_ST7789S))
 	ret = device_create_file(&(pdev->dev), &dev_attr_lcd_power);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "mxsfb: failed to add entries\n");
@@ -922,7 +922,7 @@ static int __devinit mxsfb_probe(struct platform_device *pdev)
 	}
 #endif
 	pentry->run_panel();
-#if !defined(CONFIG_FB_MXS_LCD_ILI9225B)
+#if !(defined(CONFIG_FB_MXS_LCD_ILI9225B) || defined(CONFIG_FB_MXS_LCD_ST7789S))
 	/* REVISIT: temporary workaround for MX23EVK */
 	mxsfb_disable_controller(data);
 	mxsfb_enable_controller(data);
