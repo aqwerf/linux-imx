@@ -50,7 +50,6 @@
 
 /*_____________________ Variables Definitions _______________________________*/
 
-static int _init_temp;
 atomic_t _init_panel;
 
 static struct mxs_platform_bl_data _bl_data;
@@ -140,6 +139,7 @@ static void _lcd_set_range(int x, int y, int w, int h)
 }
 
 static struct timer_list _timer;
+static int _init_once;
 static int _loading;
 
 static void _draw_loading_handler(unsigned long data)
@@ -198,8 +198,8 @@ static DEVICE_ATTR(splash, 0644,
 
 static void _loading_icon_start(void)
 {
-	_loading = 1;
 	struct platform_device *pdev;
+	_loading = 1;
 	pdev = mxs_get_device("mxs-fb", 0);
 	device_create_file(&(pdev->dev), &dev_attr_splash);
 
@@ -211,124 +211,102 @@ static void _loading_icon_start(void)
 
 static int _lcd_panel_init(void)
 {
-	_lcd_write(_CMD, 0x11);
-	mdelay(120);		/* Delay 120ms */
+	_lcd_write(_CMD, 0x11);	/* SLPOUT(11h): Sleep Out */
+	mdelay(5);		/* Delay 120ms */
 
 	/* ST7789S Frame rate setting */
-	_lcd_write(_CMD, 0xb2);
+	_lcd_write(_CMD, 0xb2);	/* PORCTRL(B2h): Porch Setting */
 	_lcd_write(_DATA, 0x0c);
 	_lcd_write(_DATA, 0x0c);
 	_lcd_write(_DATA, 0x00);
 	_lcd_write(_DATA, 0x33);
 	_lcd_write(_DATA, 0x33);
-	_lcd_write(_CMD, 0xb7);
+	_lcd_write(_CMD, 0xb7);	/* GCTRL(B7h): Gate Control */
 	_lcd_write(_DATA, 0x35);
 	/* ST7789S Power setting */
-	_lcd_write(_CMD, 0xbb);		/* VCOM setting */
-	_lcd_write(_DATA, 0x38);	/* 0x35 */
-	_lcd_write(_CMD, 0xc0);
+	_lcd_write(_CMD, 0xbb);	 /* VCOMS(BBh): VCOM Setting */
+	_lcd_write(_DATA, 0x38);
+	_lcd_write(_CMD, 0xc0);	 /* LCMCTRL(C0h): LCM Control */
 	_lcd_write(_DATA, 0x2c);
-	_lcd_write(_CMD, 0xc2);
+	_lcd_write(_CMD, 0xc2);	/* VDVVRHEN(C2h): VDV and VRH Command Enable */
 	_lcd_write(_DATA, 0x01);
 
-	_lcd_write(_CMD, 0xc0);		/* LCMCTRL (C0h): LCM Control */
+	_lcd_write(_CMD, 0xc0);	/* LCMCTRL(C0h): LCM Control */
 	_lcd_write(_DATA, 0x2c);
-
-	_lcd_write(_CMD, 0xc2);		/* VDV and VRH Command Enable */
+	_lcd_write(_CMD, 0xc2);	/* VDVVRHEN(C2h): VDV and VRH Command Enable */
 	_lcd_write(_DATA, 0x01);
 
-	_lcd_write(_CMD, 0xc3);
-	_lcd_write(_DATA, 0x18);	/* 0x0b//0x15 */
+	_lcd_write(_CMD, 0xc3);	 /* VRHS(C3h): VRH Set */
+	_lcd_write(_DATA, 0x18);
 
-	_lcd_write(_CMD, 0xc6);		/* Frame Rate Control in Normal Mode */
-	_lcd_write(_DATA, 0x0B);
+	_lcd_write(_CMD, 0xc6);	/* FRCTRL2(C6h): Frame Rate Control */
+	_lcd_write(_DATA, 0x0B); /* 69Hz */
 
-	_lcd_write(_CMD, 0xc4);
+	_lcd_write(_CMD, 0xc4);	/* VDVS(C4h): VDV Set */
 	_lcd_write(_DATA, 0x20);
-	_lcd_write(_CMD, 0xc6);		/* inversion */
-	_lcd_write(_DATA, 0xEB);	/* 0f */
-	_lcd_write(_CMD, 0xca);
+	_lcd_write(_CMD, 0xc6);	 /* FRCTRL2(C6h): Frame Rate Control */
+	_lcd_write(_DATA, 0xEB); /* 69Hz, column inversion */
+	_lcd_write(_CMD, 0xca);	 /* REGSEL2(CAh): Register Value Selection 2 */
 	_lcd_write(_DATA, 0x0f);
-	_lcd_write(_CMD, 0xc8);
+	_lcd_write(_CMD, 0xc8);	/* REGSEL1(C8h): Register Value Selection 1 */
 	_lcd_write(_DATA, 0x08);
-	_lcd_write(_CMD, 0x55);
-	_lcd_write(_DATA, 0x90);
-	_lcd_write(_CMD, 0xd0);
+	_lcd_write(_CMD, 0x55);	/* WRCACE(55h): Brightness and Color */
+	_lcd_write(_DATA, 0x90); /* medium color enhancement */
+	_lcd_write(_CMD, 0xd0);	 /* PWCTRL(D0h): Power Control */
 	_lcd_write(_DATA, 0xa4);
-	_lcd_write(_DATA, 0xa1);	/* a1 */
+	_lcd_write(_DATA, 0xa1);
 	/* ST7789S gamma setting */
-	_lcd_write(_CMD, 0xe0);
-	_lcd_write(_DATA, 0x00);	/* D0 */
+	_lcd_write(_CMD, 0xe0);	 /* PVGAMCTRL(E0h) */
+	_lcd_write(_DATA, 0x00);
 	_lcd_write(_DATA, 0x00);
 	_lcd_write(_DATA, 0x02);
 	_lcd_write(_DATA, 0x07);
 	_lcd_write(_DATA, 0x12);
 	_lcd_write(_DATA, 0x2A);
-	_lcd_write(_DATA, 0x37);	/* 20  [6:0] */
-	_lcd_write(_DATA, 0x33);	/* 36  [2:0] */
-	_lcd_write(_DATA, 0x47);	/* 43  [6:0] */
+	_lcd_write(_DATA, 0x37);
+	_lcd_write(_DATA, 0x33);
+	_lcd_write(_DATA, 0x47);
 	_lcd_write(_DATA, 0x1A);
 	_lcd_write(_DATA, 0x18);
 	_lcd_write(_DATA, 0x15);
 	_lcd_write(_DATA, 0x18);
 	_lcd_write(_DATA, 0x1A);
 
-	_lcd_write(_CMD, 0xe1);
-	_lcd_write(_DATA, 0x00);	/* D0 */
+	_lcd_write(_CMD, 0xe1);	/* NVGAMCTRL(E1h) */
+	_lcd_write(_DATA, 0x00);
 	_lcd_write(_DATA, 0x00);
 	_lcd_write(_DATA, 0x02);
 	_lcd_write(_DATA, 0x07);
 	_lcd_write(_DATA, 0x12);
 	_lcd_write(_DATA, 0x2A);
-	_lcd_write(_DATA, 0x37);	/* 20  [6:0] */
-	_lcd_write(_DATA, 0x43);	/* 36 27 */
-	_lcd_write(_DATA, 0x47);	/* 43  [6:0] */
+	_lcd_write(_DATA, 0x37);
+	_lcd_write(_DATA, 0x43);
+	_lcd_write(_DATA, 0x47);
 	_lcd_write(_DATA, 0x1A);
 	_lcd_write(_DATA, 0x18);
 	_lcd_write(_DATA, 0x15);
 	_lcd_write(_DATA, 0x18);
 	_lcd_write(_DATA, 0x1A);
 
-	_lcd_write(_CMD, 0x3A);
-	_lcd_write(_DATA, 0x55);
-	_lcd_write(_CMD, 0x29);
-	mdelay(50);
-	_lcd_write(_CMD, 0x2C);
+	_lcd_write(_CMD, 0x3A);	/* COLMOD(3Ah): Interface Pixel Format */
+	_lcd_write(_DATA, 0x55); /* 16bits RGB */
+	_lcd_write(_CMD, 0x29);	 /* DISPON(29h): Display On */
+	_lcd_write(_CMD, 0x2C);	/* RAMWR(2Ch): Memory Write */
 	return 0;
 }
 
 static int _lcd_panel_power(int set, dma_addr_t phys)
 {
-	if (!_init_temp)
-		return 0;
-
 	if (atomic_read(&_init_panel) == set)
 		return 0;
 
 	if (set) {
-		/* for external LCD reset */
-		_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_RESET);
-		mdelay(10);
-		_lcdif_write(HW_LCDIF_CTRL1_SET, BM_LCDIF_CTRL1_RESET);
-		mdelay(50);
-
-		/* for external LCD */
-		_lcd_panel_init();
-
-		atomic_set(&_init_panel, set);
-
+		_lcd_write(_CMD, 0x11); /* SLPOUT(11h): Sleep Out */
+		mdelay(5);
 		canopus_lcdif_dma_send(phys);
 	} else {
 		atomic_set(&_init_panel, set);
-
-#if 0
-		_lcd_panel_pair_write(0x0010, 0x0A02);
-		_lcd_panel_pair_write(0x00ff, 0x0000);
-		_lcd_panel_pair_write(0x0007, 0x0000);
-		mdelay(50);
-		_lcd_panel_pair_write(0x0010, 0x0003);
-		mdelay(20);
-#endif
+		_lcd_write(_CMD, 0x10); /* SLPIN(10h): Sleep in */
 	}
 
 	return 0;
@@ -380,16 +358,6 @@ static void _lcdif_setup_system_panel(void)
 			BF_LCDIF_TIMING_DATA_SETUP(4));
 }
 
-static int _lcdif_dma_init(struct device *dev, dma_addr_t phys, int memsize)
-{
-	_lcdif_write(HW_LCDIF_CTRL_SET, BM_LCDIF_CTRL_LCDIF_MASTER);
-	_lcdif_write(HW_LCDIF_CTRL1_SET,
-		     BF_LCDIF_CTRL1_BYTE_PACKING_FORMAT(0x0f));
-	_lcdif_write(HW_LCDIF_CUR_BUF, phys);
-
-	return 0;
-}
-
 static int _lcdif_init_panel(struct device *dev, dma_addr_t phys, int memsize,
 		struct mxs_platform_fb_entry *pentry)
 {
@@ -397,56 +365,66 @@ static int _lcdif_init_panel(struct device *dev, dma_addr_t phys, int memsize,
 	if (IS_ERR(_lcd_clk))
 		return -1;
 
-	if (clk_enable(_lcd_clk) != 0) {
-		clk_put(_lcd_clk);
-		return -1;
-	}
+	if (clk_enable(_lcd_clk) != 0)
+		goto _error;
 
-	if (clk_set_rate(_lcd_clk, 1000000000 / pentry->cycle_time_ns) != 0) {
-		clk_disable(_lcd_clk);
-		clk_put(_lcd_clk);
-		return -1;
-	}
+	if (clk_set_rate(_lcd_clk, 1000000000 / pentry->cycle_time_ns) != 0)
+		goto _error;
 
 	_lcdif_setup_system_panel();
 	_lcdif_write(HW_LCDIF_CUR_BUF, phys);
 	atomic_set(&_init_panel, 1);
 
-	if (_init_temp) {
-		/* for external LCD reset */
-		_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_RESET);
-		mdelay(10);
-		_lcdif_write(HW_LCDIF_CTRL1_SET, BM_LCDIF_CTRL1_RESET);
-		mdelay(50);
-
-		/* for external LCD */
-		_lcd_panel_init();
-
-		canopus_lcdif_dma_send(phys);
-	} else {
+#if 1
+	if (!_init_once) {
+		/* for booting */
+		_init_once = 1;
 		_loading_icon_start();
+	} else {
+		_lcd_write(_CMD, 0x11); /* SLPOUT(11h): Sleep Out */
+		mdelay(5);
 	}
+#else
+	/* for external LCD reset */
+	_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_RESET);
+	mdelay(10);
+	_lcdif_write(HW_LCDIF_CTRL1_SET, BM_LCDIF_CTRL1_RESET);
+	mdelay(50);
+
+	/* for external LCD */
+	_lcd_panel_init();
+#endif
 
 	mxs_lcd_set_bl_pdata(pentry->bl_data);
 	mxs_lcdif_notify_clients(MXS_LCDIF_PANEL_INIT, pentry);
-
-	_init_temp = 1;
 	return 0;
+
+_error:
+	clk_disable(_lcd_clk);
+	clk_put(_lcd_clk);
+	_lcd_clk = NULL;
+	return -1;
 }
 
 static void _lcdif_release_panel(struct device *dev,
 			  struct mxs_platform_fb_entry *pentry)
 {
+#if 1
+	_lcd_write(_CMD, 0x10); /* SLPIN(10h): Sleep in */
+#else
 	/* Reset LCD panel signel. */
 	_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_RESET);	/* low */
 	mdelay(100);
+	_lcdif_write(HW_LCDIF_CTRL1_SET, BM_LCDIF_CTRL1_RESET);
+#endif
 
 	_lcdif_write(HW_LCDIF_CTRL_CLR, BM_LCDIF_CTRL_LCDIF_MASTER);
 	_lcdif_write(HW_LCDIF_CTRL_SET, BM_LCDIF_CTRL_CLKGATE);
 
-	clk_disable(_lcd_clk);
-	clk_put(_lcd_clk);
-
+	if (_lcd_clk) {
+		clk_disable(_lcd_clk);
+		clk_put(_lcd_clk);
+	}
 	mxs_lcdif_notify_clients(MXS_LCDIF_PANEL_RELEASE, pentry);
 }
 
@@ -603,7 +581,6 @@ int canopus_lcdif_dma_send(dma_addr_t addr)
 		;
 
 	_lcdif_write(HW_LCDIF_CUR_BUF, (uint32_t)addr);
-
 	_lcdif_write(HW_LCDIF_CTRL1_CLR,
 		     BM_LCDIF_CTRL1_BYTE_PACKING_FORMAT);
 	_lcdif_write(HW_LCDIF_CTRL1_SET,
