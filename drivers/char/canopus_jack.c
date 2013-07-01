@@ -122,12 +122,10 @@ static int jack_ioctl(struct inode *inode, struct file *file,
 
 		switch (path) {
 		case _JACK_PATH_HANDSET:
-			mxs_audio_mic_bias_control(0);
 			mxs_audio_headset_mic_detect_amp_gpio_set(0);
 			mxs_audio_receiver_amp_gpio_set(1);
 			break;
 		case _JACK_PATH_HEADSET:
-			mxs_audio_mic_bias_control(1);
 			mxs_audio_headset_mic_detect_amp_gpio_set(1);
 			mxs_audio_receiver_amp_gpio_set(0);
 			break;
@@ -136,12 +134,10 @@ static int jack_ioctl(struct inode *inode, struct file *file,
 		case _JACK_PATH_FLOAT:
 		default:
 			mxs_audio_receiver_amp_gpio_set(0);
-			mxs_audio_mic_bias_control(0);
 			mxs_audio_headset_mic_detect_amp_gpio_set(0);
 			break;
 		}
 	} else if (cmd == MXS_JACK_HEADSET_MIC) {
-		mxs_audio_mic_bias_control(1);
 		mxs_audio_headset_mic_detect_amp_gpio_set(1);
 
 		mdelay(500);
@@ -152,8 +148,6 @@ static int jack_ioctl(struct inode *inode, struct file *file,
 		 * mic detect pin.
 		 */
 		if (mxs_audio_headset_mic_status_gpio_get())
-			mxs_audio_mic_bias_control(0); /* use internal mic */
-		else
 #endif
 			val = 1;
 

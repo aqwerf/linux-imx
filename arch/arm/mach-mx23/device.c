@@ -1155,26 +1155,3 @@ struct mxs_sys_timer mx23_timer = {
 	.clk_sel = BV_TIMROT_TIMCTRLn_SELECT__32KHZ_XTAL,
 	.base = IO_ADDRESS(TIMROT_PHYS_ADDR),
 };
-
-#ifdef CONFIG_MACH_MX23_CANOPUS
-#ifndef BF
-#define BF(value, field) (((value) << BP_##field) & BM_##field)
-#endif
-void
-mxs_audio_mic_bias_control(int sel) /* 0 : int mic bias, 1 : ext mic bias */
-{
-	__raw_writel(BF(1, AUDIOIN_MICLINE_MIC_RESISTOR),
-		      REGS_AUDIOIN_BASE + HW_AUDIOIN_MICLINE_SET);
-	if (sel)
-		__raw_writel(BM_AUDIOIN_MICLINE_MIC_SELECT, /* ADC0 */
-				REGS_AUDIOIN_BASE + HW_AUDIOIN_MICLINE_CLR);
-	else
-		__raw_writel(BM_AUDIOIN_MICLINE_MIC_SELECT, /* ADC1 */
-				REGS_AUDIOIN_BASE + HW_AUDIOIN_MICLINE_SET);
-	__raw_writel(BF(2, AUDIOIN_MICLINE_MIC_GAIN),
-		      REGS_AUDIOIN_BASE + HW_AUDIOIN_MICLINE_SET);
-	__raw_writel(BF(7, AUDIOIN_MICLINE_MIC_BIAS),
-		      REGS_AUDIOIN_BASE + HW_AUDIOIN_MICLINE_SET);
-}
-#endif
-
