@@ -970,6 +970,41 @@ int ddi_power_init_battery(void)
 	return ret;
 }
 
+uint16_t ddi_power_GetBattTemp(void)
+{
+	uint32_t  value, lradc_irq_mask, channel;
+
+	channel = g_ddi_bc_Configuration.u8BatteryTempChannel;
+	lradc_irq_mask = 1 << channel;
+
+	/* mux to the lradc 0th temp channel */
+	__raw_writel((0xF << (4 * channel)),
+			REGS_LRADC_BASE + HW_LRADC_CTRL4_CLR);
+
+	/* Clear the interrupt flag */
+	__raw_writel(lradc_irq_mask,
+			REGS_LRADC_BASE + HW_LRADC_CTRL1_CLR);
+	__raw_writel(BF_LRADC_CTRL0_SCHEDULE(1 << channel),
+			REGS_LRADC_BASE + HW_LRADC_CTRL0_SET);
+
+	/* Wait for conversion complete*/
+	while (!(__raw_readl(REGS_LRADC_BASE + HW_LRADC_CTRL1)
+			& lradc_irq_mask))
+		cpu_relax();
+
+	/* Clear the interrupt flag again */
+	__raw_writel(lradc_irq_mask,
+			REGS_LRADC_BASE + HW_LRADC_CTRL1_CLR);
+
+	/* read temperature value and clr lradc */
+	value = __raw_readl(REGS_LRADC_BASE +
+			HW_LRADC_CHn(channel)) & BM_LRADC_CHn_VALUE;
+
+	__raw_writel(BM_LRADC_CHn_VALUE,
+			REGS_LRADC_BASE + HW_LRADC_CHn_CLR(channel));
+	return value;
+}
+
 /*
  * Use the the lradc channel
  * get the die temperature from on-chip sensor.

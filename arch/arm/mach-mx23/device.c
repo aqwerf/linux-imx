@@ -834,7 +834,7 @@ static ddi_bc_Cfg_t battery_data = {
 	.u8DieTempHigh			 = 85,		/* deg centigrade */
 	.u8DieTempLow			 = 75,		/* deg centigrade */
 	.u16DieTempSafeCurrent		 = 0,		/* mA */
-	.monitorBatteryTemp		 = 1,		/* Monitor the battery*/
+	.monitorBatteryTemp		 = 0,		/* Monitor the battery*/
 #else
 	.u16ConditioningCurrent		 = 60,		/* mA */
 	.u32ConditioningTimeout		 = 4*60*60*1000, /* ms (4 hours) */

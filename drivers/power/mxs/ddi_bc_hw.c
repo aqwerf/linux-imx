@@ -303,7 +303,13 @@ void ddi_bc_hwGetDieTemp(int16_t *pLow, int16_t *pHigh)
 
 ddi_bc_Status_t ddi_bc_hwGetBatteryTemp(uint16_t *pReading)
 {
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	/* Get the reading in Kelvins */
+	*pReading = ddi_power_GetBattTemp();
+	return DDI_BC_STATUS_SUCCESS;
+#else
 	return (ddi_bc_Status_t)DDI_BC_STATUS_HARDWARE_DISABLED;
+#endif
 }
 
 
