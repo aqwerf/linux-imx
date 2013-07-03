@@ -215,13 +215,14 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 	}
 
 	/* adc key process */
-	vddio = hw_lradc_vddio();
+	vddio = __raw_readl(d->base + HW_LRADC_CHn(VDDIO_VOLTAGE_CH)) &
+		BM_LRADC_CHn_VALUE;
 	BUG_ON(vddio == 0);
 
 	for (i = 0; i < MAX_CH; i++) {
 		int raw, norm, key;
-		raw = __raw_readl(d->base + HW_LRADC_CHn(d->chan[i]));
-		raw &= BM_LRADC_CHn_VALUE;
+		raw = __raw_readl(d->base + HW_LRADC_CHn(d->chan[i])) &
+			BM_LRADC_CHn_VALUE;
 		norm = (raw * TARGET_VDDIO_LRADC_VALUE) / vddio;
 
 		key = mxskbd_decode_button(d->keycodes +
@@ -255,7 +256,8 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 _end:
 	__raw_writel((BM_LRADC_CTRL1_LRADC0_IRQ << d->chan[0]) +
 		     (BM_LRADC_CTRL1_LRADC0_IRQ << d->chan[1]) +
-		     (BM_LRADC_CTRL1_LRADC0_IRQ << d->chan[2]),
+		     (BM_LRADC_CTRL1_LRADC0_IRQ << d->chan[2]) +
+		     (BM_LRADC_CTRL1_LRADC0_IRQ << VDDIO_VOLTAGE_CH),
 		     d->base + HW_LRADC_CTRL1_CLR);
 	return IRQ_HANDLED;
 }
@@ -283,6 +285,12 @@ static void mxskbd_hwinit(struct platform_device *pdev)
 		mask |= BM_LRADC_CTRL1_LRADC0_IRQ << d->chan[i];
 	}
 	__raw_writel(mask, d->base + HW_LRADC_CTRL1_CLR);
+
+	/* set vddio lradc manually */
+	hw_lradc_configure_channel(VDDIO_VOLTAGE_CH, 0, 0, 0); /* no dev2 */
+	hw_lradc_set_delay_trigger(LRADC_DELAY_TRIGGER_BUTTON,
+				   1 << VDDIO_VOLTAGE_CH,
+				   1 << LRADC_DELAY_TRIGGER_BUTTON, 0, 50);
 
 	/* used only one interrupt */
 	__raw_writel(BM_LRADC_CTRL1_LRADC0_IRQ_EN << d->chan[0],
