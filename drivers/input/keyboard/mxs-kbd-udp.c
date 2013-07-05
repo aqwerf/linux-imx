@@ -39,10 +39,15 @@
 #define BUTTON_PRESS_THRESHOLD  3300
 #define LRADC_NOISE_MARGIN      200
 
+#define LRADC_DELAY		50
+
 /* this value represents the the lradc value at 3.3V ( 3.3V / 0.000879 V/b ) */
 #define TARGET_VDDIO_LRADC_VALUE 3754
 
-#define MAX_CH			3
+/* 3 keypad, 1 headset mic detect */
+#define MAX_CH			4
+
+#define MIC_DET_THRESHOLD	60
 
 struct mxskbd_data {
 	struct input_dev *input;
@@ -56,6 +61,9 @@ struct mxskbd_data {
 	int last_button;
 
 	int end_button;
+
+	int jack_last;
+	int jack_cnt;
 };
 
 static struct mxskbd_data *_devdata;
@@ -196,6 +204,51 @@ static unsigned mxskbd_incode_button(struct mxskbd_keypair *codes,
 	return (unsigned)-1; /* invalid key */
 }
 
+static void jack_process(struct mxskbd_data *d)
+{
+	int i;
+
+	i = !!mxs_audio_jack_gpio_get();
+	if (!!d->jack_last == i) {
+		d->jack_cnt = 0;
+		return;
+	}
+
+	/* mic detect bias */
+	if (d->jack_cnt == 0)
+		mxs_audio_headset_mic_detect_amp_gpio_set(1);
+
+	int x = __raw_readl(d->base + HW_LRADC_CHn(d->chan[MAX_CH-1])) &
+		BM_LRADC_CHn_VALUE;
+
+	if (++d->jack_cnt < 100)
+		return;
+
+	/* changed */
+	d->jack_cnt = 0;
+
+	input_report_switch(GET_INPUT_DEV(d),
+			    SW_HEADPHONE_INSERT, i);
+
+	if (i == 0) {
+		if (d->jack_last == SW_MICROPHONE_INSERT)
+			input_report_switch(GET_INPUT_DEV(d),
+					    SW_MICROPHONE_INSERT, 0);
+		d->jack_last = 0;
+	} else {
+		i = __raw_readl(d->base + HW_LRADC_CHn(d->chan[MAX_CH-1])) &
+			BM_LRADC_CHn_VALUE;
+
+		if (i > MIC_DET_THRESHOLD) {	/* mic */
+			d->jack_last = SW_MICROPHONE_INSERT;
+			input_report_switch(GET_INPUT_DEV(d),
+					    SW_MICROPHONE_INSERT, 1);
+		} else {
+			d->jack_last = SW_HEADPHONE_INSERT;
+		}
+	}
+}
+
 static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 {
 	struct platform_device *pdev = dev_id;
@@ -214,12 +267,24 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 		f_key = i;
 	}
 
+	/* jack detect */
+	jack_process(d);
+	if (f_key < 0 && d->jack_last == SW_MICROPHONE_INSERT) {
+		i = __raw_readl(d->base + HW_LRADC_CHn(d->chan[MAX_CH-1])) &
+			BM_LRADC_CHn_VALUE;
+		if (i <= MIC_DET_THRESHOLD) {
+			if (d->last_button == KEY_PHONE)
+				goto _end;
+			f_key = KEY_PHONE;
+		}
+	}
+
 	/* adc key process */
 	vddio = __raw_readl(d->base + HW_LRADC_CHn(VDDIO_VOLTAGE_CH)) &
 		BM_LRADC_CHn_VALUE;
 	BUG_ON(vddio == 0);
 
-	for (i = 0; i < MAX_CH; i++) {
+	for (i = 0; i < MAX_CH-1; i++) {
 		int raw, norm, key;
 		raw = __raw_readl(d->base + HW_LRADC_CHn(d->chan[i])) &
 			BM_LRADC_CHn_VALUE;
@@ -242,7 +307,7 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 		d->last_button = -1;
 	}
 
-	if (f_key >= 0) {
+	if (f_key >= 0 && f_key != d->last_button) {
 		input_report_key(GET_INPUT_DEV(d), f_key, !0);
 #ifdef ENABLE_BACKLIGHT_GPIO_CONTROL
 		_keypad_set_backlight(1);
@@ -257,6 +322,7 @@ _end:
 	__raw_writel((BM_LRADC_CTRL1_LRADC0_IRQ << d->chan[0]) +
 		     (BM_LRADC_CTRL1_LRADC0_IRQ << d->chan[1]) +
 		     (BM_LRADC_CTRL1_LRADC0_IRQ << d->chan[2]) +
+		     (BM_LRADC_CTRL1_LRADC0_IRQ << d->chan[3]) +
 		     (BM_LRADC_CTRL1_LRADC0_IRQ << VDDIO_VOLTAGE_CH),
 		     d->base + HW_LRADC_CTRL1_CLR);
 	return IRQ_HANDLED;
@@ -281,7 +347,7 @@ static void mxskbd_hwinit(struct platform_device *pdev)
 
 	for (i = 0; i < MAX_CH; i++) {
 		hw_lradc_init_ladder(d->chan[i],
-				     LRADC_DELAY_TRIGGER_BUTTON, 50);
+				     LRADC_DELAY_TRIGGER_BUTTON, LRADC_DELAY);
 		mask |= BM_LRADC_CTRL1_LRADC0_IRQ << d->chan[i];
 	}
 	__raw_writel(mask, d->base + HW_LRADC_CTRL1_CLR);
@@ -290,7 +356,8 @@ static void mxskbd_hwinit(struct platform_device *pdev)
 	hw_lradc_configure_channel(VDDIO_VOLTAGE_CH, 0, 0, 0); /* no dev2 */
 	hw_lradc_set_delay_trigger(LRADC_DELAY_TRIGGER_BUTTON,
 				   1 << VDDIO_VOLTAGE_CH,
-				   1 << LRADC_DELAY_TRIGGER_BUTTON, 0, 50);
+				   1 << LRADC_DELAY_TRIGGER_BUTTON,
+				   0, LRADC_DELAY);
 
 	/* used only one interrupt */
 	__raw_writel(BM_LRADC_CTRL1_LRADC0_IRQ_EN << d->chan[0],
@@ -370,9 +437,8 @@ static int __devinit mxskbd_probe(struct platform_device *pdev)
 		goto err_out;
 	}
 	d->base = (unsigned int)IO_ADDRESS(res->start);
-	d->chan[0] = plat_data->channel1;
-	d->chan[1] = plat_data->channel2;
-	d->chan[2] = plat_data->channel3;
+	for (i = 0; i < MAX_CH; i++)
+		d->chan[i] = plat_data->channel[i];
 	d->btn_irq1 = platform_get_irq(pdev, 0);
 
 	platform_set_drvdata(pdev, d);

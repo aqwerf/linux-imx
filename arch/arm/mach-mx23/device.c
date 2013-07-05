@@ -408,9 +408,7 @@ static struct mxskbd_keypair keyboard_data[] = {
 static struct mxs_kbd_plat_data mxs_kbd_data = {
 	.keypair = keyboard_data,
 	.keypair_offset = 8,
-	.channel1 = LRADC_CH5,
-	.channel2 = LRADC_CH3,
-	.channel3 = LRADC_CH4,
+	.channel = {LRADC_CH5, LRADC_CH3, LRADC_CH4, LRADC_CH2}
 };
 
 static struct resource mx23_kbd_res[] = {

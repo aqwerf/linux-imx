@@ -91,9 +91,7 @@ struct mxskbd_keypair {
 struct mxs_kbd_plat_data {
 	struct mxskbd_keypair *keypair;
 	int keypair_offset;
-	int channel1;
-	int channel2;
-	int channel3;
+	int channel[4];
 };
 int mxs_key_backlight_gpio_set(int set);
 #else
