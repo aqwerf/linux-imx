@@ -38,7 +38,6 @@
 /*_____________________ Constants Definitions _______________________________*/
 
 #define MXS_JACK_PATH		_IOW('P', 0, int)
-#define MXS_JACK_HEADSET_MIC	_IOW('P', 1, int)
 
 /*_____________________ Type definitions ____________________________________*/
 
@@ -54,58 +53,14 @@ enum {
 
 /*_____________________ Variables Definitions _______________________________*/
 
-static void jack_irq_work(struct work_struct *work);
-
 static struct platform_device *_pdev;
 
 static const char jack_name[] = "canopus-jack";
 static const char jack_mini_name[] = "canopus_jack";
 
-static DECLARE_DELAYED_WORK(work, jack_irq_work);
-static DECLARE_WAIT_QUEUE_HEAD(jack_wait);
-static DEFINE_SPINLOCK(jack_lock);
-
-static int last_state;
-static int update;
-
 /*_____________________ Local Declarations __________________________________*/
 
 /*_____________________ internal functions __________________________________*/
-
-static ssize_t jack_read(struct file *f, char __user *d, size_t s, loff_t *o)
-{
-	ssize_t ret;
-	unsigned int data;
-
-	if (s < sizeof(unsigned int))
-		return -EINVAL;
-
-	spin_lock(&jack_lock);
-	last_state = data = mxs_audio_jack_gpio_get() ? 1 : 0;
-	update = 0;
-
-	spin_unlock(&jack_lock);
-
-	ret = put_user(data, (unsigned int __user *)d);
-	if (ret == 0)
-		ret = sizeof(unsigned int);
-	return ret;
-}
-
-static unsigned int jack_poll(struct file *f, struct poll_table_struct *p)
-{
-	unsigned int data;
-
-	poll_wait(f, &jack_wait, p);
-
-	spin_lock(&jack_lock);
-	data = mxs_audio_jack_gpio_get() ? 1 : 0;
-	if (last_state != data)
-		update = 1;
-	spin_unlock(&jack_lock);
-
-	return (update) ? POLLIN | POLLWRNORM : 0;
-}
 
 static int jack_ioctl(struct inode *inode, struct file *file,
 		unsigned int cmd, unsigned long arg)
@@ -137,22 +92,6 @@ static int jack_ioctl(struct inode *inode, struct file *file,
 			mxs_audio_headset_mic_detect_amp_gpio_set(0);
 			break;
 		}
-	} else if (cmd == MXS_JACK_HEADSET_MIC) {
-		mxs_audio_headset_mic_detect_amp_gpio_set(1);
-
-		mdelay(500);
-
-#ifdef __FIX_ME__
-		/* Detecting heaset mic of ICW-1000 is different from
-		 * old WPU-8000. ICW-1000 used ADC instead of GPIO
-		 * mic detect pin.
-		 */
-		if (mxs_audio_headset_mic_status_gpio_get())
-#endif
-			val = 1;
-
-		if (copy_to_user((int *) arg, &val, sizeof(int)))
-			return -EFAULT;
 
 		return 0;
 	}
@@ -162,8 +101,6 @@ static int jack_ioctl(struct inode *inode, struct file *file,
 
 static const struct file_operations fops = {
 	.owner		= THIS_MODULE,
-	.read		= jack_read,
-	.poll		= jack_poll,
 	.ioctl		= jack_ioctl
 };
 
@@ -173,36 +110,16 @@ static struct miscdevice miscdev = {
 	.fops		= &fops
 };
 
-static void jack_irq_work(struct work_struct *work)
-{
-	wake_up_interruptible(&jack_wait);
-}
-
-static irqreturn_t jack_irq_handler(int irq, void *data)
-{
-	cancel_delayed_work(&work);
-	schedule_delayed_work(&work, msecs_to_jiffies(50));
-	return IRQ_HANDLED;
-}
-
 static int __init canopus_jack_probe(struct platform_device *pdev)
 {
 	int ret;
-	int irq = mxs_audio_jack_gpio_irq();
-
-	ret = request_irq(irq, jack_irq_handler,
-			IRQF_DISABLED|IRQF_TRIGGER_RISING|IRQF_TRIGGER_FALLING,
-			"canopus-jack", 0);
 	ret = misc_register(&miscdev);
 	return ret;
 }
 
 static int canopus_jack_remove(struct platform_device *pdev)
 {
-	int irq = mxs_audio_jack_gpio_irq();
-
 	misc_deregister(&miscdev);
-	free_irq(irq, 0);
 	return 0;
 }
 
