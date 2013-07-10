@@ -77,11 +77,9 @@ static int jack_ioctl(struct inode *inode, struct file *file,
 
 		switch (path) {
 		case _JACK_PATH_HANDSET:
-			mxs_audio_headset_mic_detect_amp_gpio_set(0);
 			mxs_audio_receiver_amp_gpio_set(1);
 			break;
 		case _JACK_PATH_HEADSET:
-			mxs_audio_headset_mic_detect_amp_gpio_set(1);
 			mxs_audio_receiver_amp_gpio_set(0);
 			break;
 		case _JACK_PATH_BOTH:
@@ -89,7 +87,6 @@ static int jack_ioctl(struct inode *inode, struct file *file,
 		case _JACK_PATH_FLOAT:
 		default:
 			mxs_audio_receiver_amp_gpio_set(0);
-			mxs_audio_headset_mic_detect_amp_gpio_set(0);
 			break;
 		}
 
