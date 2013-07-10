@@ -47,7 +47,7 @@
 /* 3 keypad, 1 headset mic detect */
 #define MAX_CH			4
 
-#define MIC_DET_THRESHOLD	60
+#define MIC_DET_THRESHOLD	1300
 
 struct mxskbd_data {
 	struct input_dev *input;
@@ -64,6 +64,7 @@ struct mxskbd_data {
 
 	int jack_last;
 	int jack_cnt;
+	int jack_push_cnt;
 };
 
 static struct mxskbd_data *_devdata;
@@ -143,6 +144,7 @@ static struct mxskbd_data *mxskbd_data_alloc(struct platform_device *pdev,
 	set_bit(EV_KEY, d->input->evbit);
 	set_bit(EV_REL, d->input->evbit);
 	set_bit(EV_REP, d->input->evbit);
+	set_bit(EV_SW, d->input->evbit);
 
 	d->last_button = -1;
 
@@ -152,8 +154,10 @@ static struct mxskbd_data *mxskbd_data_alloc(struct platform_device *pdev,
 		set_bit(keys->kcode, d->input->keybit);
 		keys++;
 	}
-
 	set_bit(KEY_END, d->input->keybit);
+	set_bit(KEY_KPENTER, d->input->keybit);
+	set_bit(SW_MICROPHONE_INSERT, d->input->swbit);
+	set_bit(SW_HEADPHONE_INSERT, d->input->swbit);
 
 	return d;
 }
@@ -206,47 +210,41 @@ static unsigned mxskbd_incode_button(struct mxskbd_keypair *codes,
 
 static void jack_process(struct mxskbd_data *d)
 {
-	int i;
+	int pin;
+	int in;
+	int jack;
 
-	i = !!mxs_audio_jack_gpio_get();
-	if (!!d->jack_last == i) {
+	pin = !!mxs_audio_jack_gpio_get();
+	if (!!d->jack_last == pin) {
+		if (d->jack_cnt)
+			mxs_audio_headset_mic_detect_amp_gpio_set(pin);
 		d->jack_cnt = 0;
 		return;
 	}
 
-	/* mic detect bias */
-	if (d->jack_cnt == 0)
-		mxs_audio_headset_mic_detect_amp_gpio_set(1);
+	mxs_audio_headset_mic_detect_amp_gpio_set(pin);
 
-	int x = __raw_readl(d->base + HW_LRADC_CHn(d->chan[MAX_CH-1])) &
-		BM_LRADC_CHn_VALUE;
-
-	if (++d->jack_cnt < 100)
+	if (++d->jack_cnt <= 6)
 		return;
 
 	/* changed */
 	d->jack_cnt = 0;
 
-	input_report_switch(GET_INPUT_DEV(d),
-			    SW_HEADPHONE_INSERT, i);
-
-	if (i == 0) {
-		if (d->jack_last == SW_MICROPHONE_INSERT)
-			input_report_switch(GET_INPUT_DEV(d),
-					    SW_MICROPHONE_INSERT, 0);
+	if (pin == 0) {		/* eject */
+		in = 0;
+		jack = d->jack_last;
 		d->jack_last = 0;
-	} else {
-		i = __raw_readl(d->base + HW_LRADC_CHn(d->chan[MAX_CH-1])) &
+	} else {		/* insert */
+		int i = __raw_readl(d->base + HW_LRADC_CHn(d->chan[MAX_CH-1])) &
 			BM_LRADC_CHn_VALUE;
 
-		if (i > MIC_DET_THRESHOLD) {	/* mic */
-			d->jack_last = SW_MICROPHONE_INSERT;
-			input_report_switch(GET_INPUT_DEV(d),
-					    SW_MICROPHONE_INSERT, 1);
-		} else {
-			d->jack_last = SW_HEADPHONE_INSERT;
-		}
+		d->jack_last = (i > MIC_DET_THRESHOLD) ?
+			SW_MICROPHONE_INSERT : SW_HEADPHONE_INSERT;
+
+		in = 1;
+		jack = d->jack_last;
 	}
+	input_report_switch(GET_INPUT_DEV(d), jack, in);
 }
 
 static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
@@ -255,6 +253,8 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 	struct mxskbd_data *d = platform_get_drvdata(pdev);
 	int i, f_key = -1;
 	u32 vddio;
+
+	jack_process(d);
 
 	/* end key process */
 	i = (__raw_readl(REGS_POWER_BASE + HW_POWER_STS) &
@@ -267,17 +267,23 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 		f_key = i;
 	}
 
-	/* jack detect */
-	jack_process(d);
-	if (f_key < 0 && d->jack_last == SW_MICROPHONE_INSERT) {
+	if (f_key < 0 && d->jack_cnt == 0 &&
+	    d->jack_last == SW_MICROPHONE_INSERT) {
 		i = __raw_readl(d->base + HW_LRADC_CHn(d->chan[MAX_CH-1])) &
 			BM_LRADC_CHn_VALUE;
+
 		if (i <= MIC_DET_THRESHOLD) {
-			if (d->last_button == KEY_PHONE)
+			if (d->last_button == KEY_KPENTER) {
+				d->jack_push_cnt = 0;
 				goto _end;
-			f_key = KEY_PHONE;
-		}
-	}
+			}
+
+			if (++d->jack_push_cnt > 4)
+				f_key = KEY_KPENTER;
+		} else
+			d->jack_push_cnt = 0;
+	} else
+		d->jack_push_cnt = 0;
 
 	/* adc key process */
 	vddio = __raw_readl(d->base + HW_LRADC_CHn(VDDIO_VOLTAGE_CH)) &
