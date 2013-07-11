@@ -902,7 +902,6 @@ CONFIG_HW_RANDOM=y
 # CONFIG_RAW_DRIVER is not set
 # CONFIG_TCG_TPM is not set
 # CONFIG_RAMOOPS is not set
-CONFIG_CANOPUS_JACK=y
 # CONFIG_I2C is not set
 # CONFIG_SPI is not set
 
