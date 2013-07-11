@@ -38,7 +38,10 @@ static const struct snd_soc_dapm_route audio_map[] = {
 	/* HPR/HPL OUT --> Headphone Jack */
 	{"Headphone Jack", NULL, "HPR"},
 	{"Headphone Jack", NULL, "HPL"},
-
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	/* Headphone Jack --> Hendset Spk */
+	{"Handset Spk", NULL, "Headphone Jack"},
+#endif
 	/* SPEAKER OUT --> Ext Speaker */
 	{"Ext Spk", NULL, "SPEAKER"},
 };
@@ -51,9 +54,18 @@ static const char *jack_function[] = { "off", "on"};
 static const char *spk_function[] = { "off", "on" };
 
 
+#ifdef CONFIG_MACH_MX23_CANOPUS
+#include <mach/device.h>
+static int mxs_evk_handset_func;
+static const char *handset_function[] = { "off", "on" };
+#endif
+
 static const struct soc_enum mxs_evk_enum[] = {
 	SOC_ENUM_SINGLE_EXT(2, jack_function),
 	SOC_ENUM_SINGLE_EXT(2, spk_function),
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	SOC_ENUM_SINGLE_EXT(2, handset_function),
+#endif
 };
 
 static int mxs_evk_get_jack(struct snd_kcontrol *kcontrol,
@@ -105,10 +117,43 @@ static int mxs_evk_set_spk(struct snd_kcontrol *kcontrol,
 	snd_soc_dapm_sync(codec);
 	return 1;
 }
+
+#ifdef CONFIG_MACH_MX23_CANOPUS
+static int mxs_evk_get_handset_spk(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.enumerated.item[0] = mxs_evk_handset_func;
+	return 0;
+}
+
+static int mxs_evk_set_handset_spk(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+
+	if (mxs_evk_handset_func == ucontrol->value.enumerated.item[0])
+		return 0;
+
+	mxs_evk_handset_func = ucontrol->value.enumerated.item[0];
+	if (mxs_evk_handset_func) {
+		snd_soc_dapm_enable_pin(codec, "Handset Spk");
+		mxs_audio_receiver_amp_gpio_set(1);
+	} else {
+		snd_soc_dapm_disable_pin(codec, "Handset Spk");
+		mxs_audio_receiver_amp_gpio_set(0);
+	}
+	snd_soc_dapm_sync(codec);
+	return 1;
+}
+#endif
+
 /* mxs evk card dapm widgets */
 static const struct snd_soc_dapm_widget mxs_evk_dapm_widgets[] = {
 	SND_SOC_DAPM_SPK("Ext Spk", NULL),
 	SND_SOC_DAPM_HP("Headphone Jack", NULL),
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	SND_SOC_DAPM_SPK("Handset Spk", NULL),
+#endif
 };
 
 static const struct snd_kcontrol_new mxs_evk_controls[] = {
@@ -116,6 +161,10 @@ static const struct snd_kcontrol_new mxs_evk_controls[] = {
 		     mxs_evk_set_jack),
 	SOC_ENUM_EXT("Speaker Playback Switch", mxs_evk_enum[1],
 		     mxs_evk_get_spk, mxs_evk_set_spk),
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	SOC_ENUM_EXT("Handset Playback Switch", mxs_evk_enum[2],
+		     mxs_evk_get_handset_spk, mxs_evk_set_handset_spk),
+#endif
 };
 
 static int mxs_evk_codec_init(struct snd_soc_codec *codec)
