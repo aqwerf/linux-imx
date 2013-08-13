@@ -3259,7 +3259,8 @@ static struct platform_driver udc_driver = {
 static int __init udc_init(void)
 {
 	printk(KERN_INFO "%s (%s)\n", driver_desc, DRIVER_VERSION);
-#ifdef CONFIG_MACH_MX23_CANOPUS
+
+#if defined(CONFIG_MACH_MX23_CANOPUS) && !defined(CONFIG_FSL_UTP)
 	/* FIXME: patch for use kernel image for nfs & standalone */
 	if (strstr(boot_command_line, "nfsroot") == NULL)
 		return 0;
