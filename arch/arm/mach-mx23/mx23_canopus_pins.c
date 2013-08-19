@@ -542,6 +542,18 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.output		= 0,
 		.data		= 0,
 	},
+	/* Volume UP Key */
+	{
+		.name		= "VOL_UP",
+		.id		= PINID_GPMI_D14,
+		.fun		= PIN_GPIO,
+	}
+	/* Volume Down Key */
+	{
+		.name		= "VOL_DOWN",
+		.id		= PINID_GPMI_D08,
+		.fun		= PIN_GPIO,
+	}
 	/* LCD Vendor Discriminator */
 	{
 		.name		= "LCD_ID2",
