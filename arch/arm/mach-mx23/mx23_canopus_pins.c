@@ -51,13 +51,13 @@ static struct pin_desc canopus_fixed_pins[] = {
 #ifdef CONFIG_MXS_AUART1_DEVICE_ENABLE
 	{
 		.name		= "AUART1.RX",
-		.id		= PINID_AUART1_RX,
-		.fun		= PIN_FUN1,
+		.id		= PINID_I2C_SDA,
+		.fun		= PIN_FUN3,
 	},
 	{
 		.name		= "AUART1.TX",
-		.id		= PINID_AUART1_TX,
-		.fun		= PIN_FUN1,
+		.id		= PINID_I2C_SCL,
+		.fun		= PIN_FUN3,
 	},
 #endif
 #if defined(CONFIG_FB_MXS) || defined(CONFIG_FB_MXS_MODULE)
