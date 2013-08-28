@@ -443,7 +443,7 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.voltage	= PAD_3_3V,
 		.drive		= 1,
 		.output		= 1,
-		.data		= 1,
+		.data		= 0,
 	},
 	/* Acrtive Low, Reset signal to power down the AR6003 */
 	{
@@ -718,3 +718,13 @@ void mxs_key_irq_enable(void)
 	desc->chip->unmask(irq);
 	desc->status &= ~IRQ_MASKED;
 }
+
+/* Flash writing kernel do not call it, for reducing current */
+#ifndef CONFIG_USB_FILE_STORAGE
+static int __init mxs_wifi_pmu_enable(void)
+{
+	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_RDY3), 1);
+	return 0;
+}
+late_initcall(mxs_wifi_pmu_enable);
+#endif
