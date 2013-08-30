@@ -290,6 +290,13 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 		BM_LRADC_CHn_VALUE;
 	BUG_ON(vddio == 0);
 
+#ifdef DUMP_KEY_ADC
+	static int val[MAX_CH];
+	printk("KEY=0x%03x(%4d), 0x%03x(%4d), 0x%03x(%4d), 0x%03x(%4d)\n",
+	       val[0], val[0], val[1], val[1],
+	       val[2], val[2], val[3], val[3]);
+#endif
+
 	for (i = 0; i < MAX_CH-1; i++) {
 		int raw, norm, key;
 		raw = __raw_readl(d->base + HW_LRADC_CHn(d->chan[i])) &
@@ -299,6 +306,9 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 		key = mxskbd_decode_button(d->keycodes +
 					   d->keycodes_offset*i, norm);
 
+#ifdef DUMP_KEY_ADC
+		val[i] = raw;
+#endif
 		if (key >= 0) {
 			if (key == d->last_button)
 				goto _end;
