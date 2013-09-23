@@ -824,8 +824,8 @@ static ddi_bc_Cfg_t battery_data = {
 	.u16ChargingVoltage		 = 4100,	/* mV */
 	/* FIXME: the current comparator could have h/w bugs in current
 	 * detection through POWER_STS.CHRGSTS bit */
-	.u16ChargingCurrent		 = 650,		/* mA 650 */
-	.u16ChargingThresholdCurrent	 = 65,		/* mA 65 */
+	.u16ChargingCurrent		 = 350,		/* mA 350 */
+	.u16ChargingThresholdCurrent	 = 30,		/* mA 30 */
 	.u32ChargingTimeout		 = 10*60*60*1000,/* ms (10 hours) */
 	.u32TopOffPeriod		 = 1*60*1000,	/* ms (1 minutes) */
 	.monitorDieTemp			 = 1,		/* Monitor the die */
