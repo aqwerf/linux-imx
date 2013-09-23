@@ -100,11 +100,11 @@
 
 
 /* Select your 5V Detection method */
-
-static ddi_power_5vDetection_t DetectionMethod =
-			DDI_POWER_5V_VDD5V_GT_VDDIO;
-/* static ddi_power_5vDetection_t DetectionMethod = DDI_POWER_5V_VBUSVALID; */
-
+#ifdef CONFIG_MACH_MX23_CANOPUS
+static ddi_power_5vDetection_t DetectionMethod = DDI_POWER_5V_VBUSVALID;
+#else
+static ddi_power_5vDetection_t DetectionMethod = DDI_POWER_5V_VDD5V_GT_VDDIO;
+#endif
 
 /* Code */
 
