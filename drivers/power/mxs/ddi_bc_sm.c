@@ -466,8 +466,8 @@ static ddi_bc_Status_t ddi_bc_WaitingToCharge(void)
 #ifdef CONFIG_MACH_MX23_CANOPUS
 	uint16_t x;
 
-	/* for recharge voltage to 3.827V */
-	x = u16BatteryVoltage + (u16BatteryVoltage / 15);
+	/* for recharge voltage to 3.9975V */
+	x = u16BatteryVoltage + (u16BatteryVoltage / 40);
 
 	if (g_ddi_bc_State == DDI_BC_STATE_TOPPING_OFF_COMPLETE &&
 			x >= g_ddi_bc_Configuration.u16ChargingVoltage)
