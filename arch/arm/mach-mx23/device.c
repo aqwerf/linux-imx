@@ -832,7 +832,10 @@ static ddi_bc_Cfg_t battery_data = {
 	.u8DieTempHigh			 = 85,		/* deg centigrade */
 	.u8DieTempLow			 = 75,		/* deg centigrade */
 	.u16DieTempSafeCurrent		 = 0,		/* mA */
-	.monitorBatteryTemp		 = 0,		/* Monitor the battery*/
+	.monitorBatteryTemp		 = 1,		/* Monitor the battery*/
+	.u8BatteryTempChannel		 = 0,		/* LRADC 0 */
+	.u16BatteryTempHigh		 = 826,		/* 45 */
+	.u16BatteryTempLow		 = 996,		/* 40.56 */
 #else
 	.u16ConditioningCurrent		 = 60,		/* mA */
 	.u32ConditioningTimeout		 = 4*60*60*1000, /* ms (4 hours) */
@@ -848,10 +851,10 @@ static ddi_bc_Cfg_t battery_data = {
 	.u8DieTempLow			 = 65,		/* deg centigrade */
 	.u16DieTempSafeCurrent		 = 0,		/* mA */
 	.monitorBatteryTemp		 = 0,		/* Monitor the battery*/
-#endif
 	.u8BatteryTempChannel		 = 1,		/* LRADC 1 */
 	.u16BatteryTempHigh		 = 642,		/* Unknown units */
 	.u16BatteryTempLow		 = 497,		/* Unknown units */
+#endif
 	.u16BatteryTempSafeCurrent	 = 0,		/* mA */
 };
 

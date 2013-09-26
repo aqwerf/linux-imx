@@ -373,9 +373,13 @@ void ddi_bc_RampUpdateAlarms()
 				/* We'll change that if the reading drops below the low mark. */
 				/* -------------------------------------------------------------- */
 
+#ifdef CONFIG_MACH_MX23_CANOPUS
+				if (u16Reading >=
+				    g_ddi_bc_Configuration.u16BatteryTempLow) {
+#else
 				if (u16Reading <
 				    g_ddi_bc_Configuration.u16BatteryTempLow) {
-
+#endif
 					/* ---------------------------------------------------------- */
 					/* If control arrives here, we're safe now. Drop the alarm. */
 					/* ---------------------------------------------------------- */
@@ -393,9 +397,13 @@ void ddi_bc_RampUpdateAlarms()
 				/* change that if the reading rises above the high mark. */
 				/* -------------------------------------------------------------- */
 
+#ifdef CONFIG_MACH_MX23_CANOPUS
+				if (u16Reading <
+				    g_ddi_bc_Configuration.u16BatteryTempHigh) {
+#else
 				if (u16Reading >=
 				    g_ddi_bc_Configuration.u16BatteryTempHigh) {
-
+#endif
 					/* ---------------------------------------------------------- */
 					/* If control arrives here, we're running too hot. Raise the */
 					/* alarm. */

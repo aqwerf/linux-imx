@@ -977,9 +977,21 @@ uint16_t ddi_power_GetBattTemp(void)
 	channel = g_ddi_bc_Configuration.u8BatteryTempChannel;
 	lradc_irq_mask = 1 << channel;
 
+	/* enable current source onto LRADC0 */
+	__raw_writel(BM_LRADC_CTRL2_TEMP_SENSOR_IENABLE0,
+			REGS_LRADC_BASE + HW_LRADC_CTRL2_SET);
+
+	__raw_writel(BF_LRADC_CTRL2_TEMP_ISRC0(BV_LRADC_CTRL2_TEMP_ISRC0__20),
+			REGS_LRADC_BASE + HW_LRADC_CTRL2_SET);
+
+	__raw_writel(BF_LRADC_CTRL2_DIVIDE_BY_TWO(1 << channel),
+			REGS_LRADC_BASE + HW_LRADC_CTRL2_SET);
+
 	/* mux to the lradc 0th temp channel */
 	__raw_writel((0xF << (4 * channel)),
 			REGS_LRADC_BASE + HW_LRADC_CTRL4_CLR);
+	__raw_writel((0 << (4 * channel)),
+			REGS_LRADC_BASE + HW_LRADC_CTRL4_SET);
 
 	/* Clear the interrupt flag */
 	__raw_writel(lradc_irq_mask,
@@ -1002,7 +1014,8 @@ uint16_t ddi_power_GetBattTemp(void)
 
 	__raw_writel(BM_LRADC_CHn_VALUE,
 			REGS_LRADC_BASE + HW_LRADC_CHn_CLR(channel));
-	return value;
+	/* reduce errors */
+	return value - (value*9/100);
 }
 
 /*
@@ -1013,7 +1026,11 @@ uint16_t MeasureInternalDieTemperature(void)
 {
 	uint32_t  ch8Value, ch9Value, lradc_irq_mask, channel;
 
+#ifdef CONFIG_MACH_MX23_CANOPUS
+	channel = LRADC_CH1;
+#else
 	channel = g_ddi_bc_Configuration.u8BatteryTempChannel;
+#endif
 	lradc_irq_mask = 1 << channel;
 
 	/* power up internal tep sensor block */
