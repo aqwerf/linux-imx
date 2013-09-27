@@ -374,8 +374,13 @@ void ddi_bc_RampUpdateAlarms()
 				/* -------------------------------------------------------------- */
 
 #ifdef CONFIG_MACH_MX23_CANOPUS
+#define BATT_TEMP_MARGIN 100
 				if (u16Reading >=
-				    g_ddi_bc_Configuration.u16BatteryTempLow) {
+				    g_ddi_bc_Configuration.u16BatteryTempHigh
+				    + BATT_TEMP_MARGIN &&
+				    u16Reading <=
+				    g_ddi_bc_Configuration.u16BatteryTempLow
+				    - BATT_TEMP_MARGIN) {
 #else
 				if (u16Reading <
 				    g_ddi_bc_Configuration.u16BatteryTempLow) {
@@ -399,7 +404,9 @@ void ddi_bc_RampUpdateAlarms()
 
 #ifdef CONFIG_MACH_MX23_CANOPUS
 				if (u16Reading <
-				    g_ddi_bc_Configuration.u16BatteryTempHigh) {
+				    g_ddi_bc_Configuration.u16BatteryTempHigh ||
+				    u16Reading >
+				    g_ddi_bc_Configuration.u16BatteryTempLow) {
 #else
 				if (u16Reading >=
 				    g_ddi_bc_Configuration.u16BatteryTempHigh) {

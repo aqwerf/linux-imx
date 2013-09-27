@@ -970,19 +970,33 @@ int ddi_power_init_battery(void)
 	return ret;
 }
 
+void ddi_power_SetBattTempBias(bool enable)
+{
+	if (enable) {
+		/* enable current source onto LRADC0 */
+		__raw_writel(BM_LRADC_CTRL2_TEMP_SENSOR_IENABLE0,
+				REGS_LRADC_BASE + HW_LRADC_CTRL2_SET);
+		/* current is 20uA */
+		__raw_writel(BF_LRADC_CTRL2_TEMP_ISRC0(
+					BV_LRADC_CTRL2_TEMP_ISRC0__20),
+				REGS_LRADC_BASE + HW_LRADC_CTRL2_SET);
+	} else {
+		/* disable current source onto LRADC0 */
+		__raw_writel(BM_LRADC_CTRL2_TEMP_SENSOR_IENABLE0,
+				REGS_LRADC_BASE + HW_LRADC_CTRL2_CLR);
+		/* current is 0uA */
+		__raw_writel(BF_LRADC_CTRL2_TEMP_ISRC0(
+					BV_LRADC_CTRL2_TEMP_ISRC0__ZERO),
+				REGS_LRADC_BASE + HW_LRADC_CTRL2_SET);
+	}
+}
+
 uint16_t ddi_power_GetBattTemp(void)
 {
 	uint32_t  value, lradc_irq_mask, channel;
 
 	channel = g_ddi_bc_Configuration.u8BatteryTempChannel;
 	lradc_irq_mask = 1 << channel;
-
-	/* enable current source onto LRADC0 */
-	__raw_writel(BM_LRADC_CTRL2_TEMP_SENSOR_IENABLE0,
-			REGS_LRADC_BASE + HW_LRADC_CTRL2_SET);
-
-	__raw_writel(BF_LRADC_CTRL2_TEMP_ISRC0(BV_LRADC_CTRL2_TEMP_ISRC0__20),
-			REGS_LRADC_BASE + HW_LRADC_CTRL2_SET);
 
 	__raw_writel(BF_LRADC_CTRL2_DIVIDE_BY_TWO(1 << channel),
 			REGS_LRADC_BASE + HW_LRADC_CTRL2_SET);
@@ -1015,7 +1029,7 @@ uint16_t ddi_power_GetBattTemp(void)
 	__raw_writel(BM_LRADC_CHn_VALUE,
 			REGS_LRADC_BASE + HW_LRADC_CHn_CLR(channel));
 	/* reduce errors */
-	return value - (value*9/100);
+	return value - (value*10/100);
 }
 
 /*

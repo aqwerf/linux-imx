@@ -578,6 +578,9 @@ void init_protection(struct mxs_info *info)
 	 */
 	if ((pmu_5v_status == existing_5v_connection) &&
 		 ddi_power_check_4p2_bits()) {
+#ifdef CONFIG_MACH_MX23_CANOPUS
+		ddi_power_SetBattTempBias(true);
+#endif
 		ddi_power_enable_5v_disconnect_detection();
 
 		/* includes VBUS DROOP workaround for errata */
@@ -647,6 +650,9 @@ static void check_and_handle_5v_connection(struct mxs_info *info)
 	switch (ddi_power_GetPmu5vStatus()) {
 
 	case new_5v_connection:
+#ifdef CONFIG_MACH_MX23_CANOPUS
+		ddi_power_SetBattTempBias(true);
+#endif
 		ddi_power_enable_5v_disconnect_detection();
 		info->sm_5v_connection_status = _5v_connected_unverified;
 
@@ -717,7 +723,9 @@ static void check_and_handle_5v_connection(struct mxs_info *info)
 		break;
 
 	case new_5v_disconnection:
-
+#ifdef CONFIG_MACH_MX23_CANOPUS
+		ddi_power_SetBattTempBias(false);
+#endif
 		ddi_bc_SetDisable();
 		ddi_bc_SetCurrentLimit(0);
 		if (info->regulator)
@@ -761,6 +769,7 @@ static void check_and_handle_5v_connection(struct mxs_info *info)
 				REGS_POWER_BASE + HW_POWER_5VCTRL);
 
 #ifdef CONFIG_MACH_MX23_CANOPUS
+				_tmpr_state = 0;
 				_change_state(MXS_EVENT_BATTERY);
 #endif
 			}
