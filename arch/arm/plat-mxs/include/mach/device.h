@@ -80,6 +80,8 @@ extern int mxs_lcd_id1_gpio_get(void);
 extern int mxs_lcd_id2_gpio_get(void);
 extern void mxs_wow_irq_enable(void);
 extern void mxs_key_irq_enable(void);
+extern int mxs_key_volume_up_gpio_get(void);
+extern int mxs_key_volume_dn_gpio_get(void);
 #endif
 
 struct mxskbd_keypair {

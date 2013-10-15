@@ -158,6 +158,8 @@ static struct mxskbd_data *mxskbd_data_alloc(struct platform_device *pdev,
 	set_bit(KEY_KPENTER, d->input->keybit);
 	set_bit(SW_MICROPHONE_INSERT, d->input->swbit);
 	set_bit(SW_HEADPHONE_INSERT, d->input->swbit);
+	set_bit(KEY_VOLUMEUP, d->input->keybit);
+	set_bit(KEY_VOLUMEDOWN, d->input->keybit);
 
 	return d;
 }
@@ -247,11 +249,21 @@ static void jack_process(struct mxskbd_data *d)
 	input_report_switch(GET_INPUT_DEV(d), jack, in);
 }
 
+static int volume_key_process(struct mxskbd_data *d)
+{
+	if (!mxs_key_volume_up_gpio_get())
+		return KEY_VOLUMEUP;
+	else if (!mxs_key_volume_dn_gpio_get())
+		return KEY_VOLUMEDOWN;
+
+	return -1;
+}
+
 static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 {
 	struct platform_device *pdev = dev_id;
 	struct mxskbd_data *d = platform_get_drvdata(pdev);
-	int i, f_key = -1;
+	int i, key, f_key = -1;
 	u32 vddio;
 
 	jack_process(d);
@@ -298,7 +310,7 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 #endif
 
 	for (i = 0; i < MAX_CH-1; i++) {
-		int raw, norm, key;
+		int raw, norm;
 		raw = __raw_readl(d->base + HW_LRADC_CHn(d->chan[i])) &
 			BM_LRADC_CHn_VALUE;
 		norm = (raw * TARGET_VDDIO_LRADC_VALUE) / vddio;
@@ -316,6 +328,15 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 			if (f_key < 0)
 				f_key = key;
 		}
+	}
+
+	key = volume_key_process(d);
+	if (key > 0) {
+		if (key == d->last_button)
+			goto _end;
+
+		if (f_key < 0)
+			f_key = key;
 	}
 
 	if (d->last_button >= 0) {

@@ -547,12 +547,22 @@ static struct pin_desc canopus_fixed_pins[] = {
 		.name		= "VOL_UP",
 		.id		= PINID_GPMI_D14,
 		.fun		= PIN_GPIO,
+		.voltage	= PAD_3_3V,
+		.drive		= 1,
+		.output		= 0,
+		.data		= 1,
+
 	},
 	/* Volume Down Key */
 	{
 		.name		= "VOL_DOWN",
 		.id		= PINID_GPMI_D08,
 		.fun		= PIN_GPIO,
+		.voltage	= PAD_3_3V,
+		.drive		= 1,
+		.output		= 0,
+		.data		= 1,
+
 	},
 	/* LCD Vendor Discriminator */
 	{
@@ -699,6 +709,16 @@ int mxs_audio_lcd_id1_gpio_get(void)
 int mxs_audio_lcd_id2_gpio_get(void)
 {
 	return gpio_get_value(MXS_PIN_TO_GPIO(PINID_LCD_VSYNC));
+}
+
+int mxs_key_volume_up_gpio_get(void)
+{
+	return gpio_get_value(MXS_PIN_TO_GPIO(PINID_GPMI_D14));
+}
+
+int mxs_key_volume_dn_gpio_get(void)
+{
+	return gpio_get_value(MXS_PIN_TO_GPIO(PINID_GPMI_D08));
 }
 
 void mxs_wow_irq_enable(void)
