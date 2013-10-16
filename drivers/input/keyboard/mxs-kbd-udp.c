@@ -195,10 +195,10 @@ static int mxskbd_decode_button(struct mxskbd_keypair *codes,
 	return -1; /* invalid key */
 }
 
-static unsigned mxskbd_incode_button(struct mxskbd_keypair *codes,
+static unsigned mxskbd_encode_button(struct mxskbd_keypair *codes,
 			int kcode)
 {
-	pr_debug("Incoding %d\n", kcode);
+	pr_debug("Encoding %d\n", kcode);
 	while (codes->raw != -1) {
 		if (kcode == codes->kcode) {
 			pr_debug("matches code 0x%x = %d(%d)\n",
