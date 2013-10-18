@@ -726,10 +726,8 @@ static int mxsfb_lcd_power_store(struct device *dev,
 	if (strnicmp(buf, "on", 2) == 0 ||
 			strnicmp(buf, "1", 1) == 0) {
 		set_controller_state(cdata, F_ENABLE);
-		mxsfb_lcd_power(1);
 	} else if (strnicmp(buf, "off", 3) == 0 ||
 			strnicmp(buf, "0", 1) == 0) {
-		mxsfb_lcd_power(0);
 		set_controller_state(cdata, F_DISABLE);
 	} else {
 		return -EINVAL;
