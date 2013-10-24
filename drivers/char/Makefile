@@ -119,6 +119,8 @@ obj-$(CONFIG_RAMOOPS)		+= ramoops.o
 obj-$(CONFIG_JS_RTC)		+= js-rtc.o
 js-rtc-y = rtc.o
 
+obj-$(CONFIG_CANOPUS_MOTOR) 	+= canopus_motor.o
+
 # Files generated that shall be removed upon make clean
 clean-files := consolemap_deftbl.c defkeymap.c
 

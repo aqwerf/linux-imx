@@ -82,6 +82,7 @@ extern void mxs_wow_irq_enable(void);
 extern void mxs_key_irq_enable(void);
 extern int mxs_key_volume_up_gpio_get(void);
 extern int mxs_key_volume_dn_gpio_get(void);
+extern int mxs_motor_gpio_set(int set);
 #endif
 
 struct mxskbd_keypair {

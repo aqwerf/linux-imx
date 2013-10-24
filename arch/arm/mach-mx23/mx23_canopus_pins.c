@@ -721,6 +721,13 @@ int mxs_key_volume_dn_gpio_get(void)
 	return gpio_get_value(MXS_PIN_TO_GPIO(PINID_GPMI_D08));
 }
 
+int mxs_motor_gpio_set(int set)
+{
+	gpio_set_value(MXS_PIN_TO_GPIO(PINID_GPMI_D15), set);
+
+	return 0;
+}
+
 void mxs_wow_irq_enable(void)
 {
 	unsigned int irq = gpio_to_irq(MXS_PIN_TO_GPIO(PINID_ROTARYB));
