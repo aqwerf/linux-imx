@@ -209,7 +209,7 @@ static void _loading_icon_start(void)
 	add_timer(&_timer);
 }
 
-static void force_lcd_update()
+static void force_lcd_update(dma_addr_t phys)
 {
 	int i;
 	short *p = phys_to_virt(phys);
@@ -312,7 +312,7 @@ static int _lcd_panel_power(int set, dma_addr_t phys)
 	if (set) {
 		_lcd_write(_CMD, 0x11); /* SLPOUT(11h): Sleep Out */
 		mdelay(5);
-		force_lcd_update();
+		force_lcd_update(phys);
 	} else {
 		atomic_set(&_init_panel, set);
 		_lcd_write(_CMD, 0x10); /* SLPIN(10h): Sleep in */
@@ -392,7 +392,7 @@ static int _lcdif_init_panel(struct device *dev, dma_addr_t phys, int memsize,
 	} else {
 		_lcd_write(_CMD, 0x11); /* SLPOUT(11h): Sleep Out */
 		mdelay(5);
-		force_lcd_update();
+		force_lcd_update(phys);
 	}
 #else
 	/* for external LCD reset */
