@@ -726,8 +726,14 @@ static int mxsfb_lcd_power_store(struct device *dev,
 	if (strnicmp(buf, "on", 2) == 0 ||
 			strnicmp(buf, "1", 1) == 0) {
 		set_controller_state(cdata, F_ENABLE);
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_lock(&_lcd_wake_lock);
+#endif
 	} else if (strnicmp(buf, "off", 3) == 0 ||
 			strnicmp(buf, "0", 1) == 0) {
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_unlock(&_lcd_wake_lock);
+#endif
 		set_controller_state(cdata, F_DISABLE);
 	} else {
 		return -EINVAL;
