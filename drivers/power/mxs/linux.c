@@ -1700,7 +1700,7 @@ static int mxs_bat_resume(struct platform_device *pdev)
 	mutex_unlock(&info->sm_lock);
 
 #ifdef CONFIG_HAS_WAKELOCK
-		wake_lock_timeout(&_charger_wake_lock, 50);
+		wake_lock_timeout(&_charger_wake_lock, 100);
 #endif
 
 	return 0;
