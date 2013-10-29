@@ -587,6 +587,9 @@ void mx23_pm_idle(void)
 
 static void mx23_pm_power_off(void)
 {
+	/* clear reboot mark */
+	__raw_writel(0, IO_ADDRESS(RTC_PHYS_ADDR) + HW_RTC_PERSISTENT2);
+
 	__raw_writel(BM_RTC_PERSISTENT0_AUTO_RESTART,
 		     IO_ADDRESS(RTC_PHYS_ADDR) + HW_RTC_PERSISTENT0_CLR);
 	udelay(100);
