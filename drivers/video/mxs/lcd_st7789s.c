@@ -384,26 +384,26 @@ static int _lcdif_init_panel(struct device *dev, dma_addr_t phys, int memsize,
 	_lcdif_write(HW_LCDIF_CUR_BUF, phys);
 	atomic_set(&_init_panel, 1);
 
-#if 1
 	if (!_init_once) {
 		/* for booting */
 		_init_once = 1;
 		_loading_icon_start();
 	} else {
+#if 1
+		/* for external LCD reset */
+		_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_RESET);
+		mdelay(10);
+		_lcdif_write(HW_LCDIF_CTRL1_SET, BM_LCDIF_CTRL1_RESET);
+		mdelay(50);
+
+		/* for external LCD */
+		_lcd_panel_init();
+#else
 		_lcd_write(_CMD, 0x11); /* SLPOUT(11h): Sleep Out */
 		mdelay(5);
+#endif
 		force_lcd_update(phys);
 	}
-#else
-	/* for external LCD reset */
-	_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_RESET);
-	mdelay(10);
-	_lcdif_write(HW_LCDIF_CTRL1_SET, BM_LCDIF_CTRL1_RESET);
-	mdelay(50);
-
-	/* for external LCD */
-	_lcd_panel_init();
-#endif
 
 	mxs_lcd_set_bl_pdata(pentry->bl_data);
 	mxs_lcdif_notify_clients(MXS_LCDIF_PANEL_INIT, pentry);
