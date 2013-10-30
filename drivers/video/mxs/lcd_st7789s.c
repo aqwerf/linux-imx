@@ -392,9 +392,13 @@ static int _lcdif_init_panel(struct device *dev, dma_addr_t phys, int memsize,
 #if 1
 		/* for external LCD reset */
 		_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_RESET);
-		mdelay(10);
+		udelay(4); /* Shorter than 5us */
 		_lcdif_write(HW_LCDIF_CTRL1_SET, BM_LCDIF_CTRL1_RESET);
-		mdelay(50);
+		mdelay(1);
+		_lcdif_write(HW_LCDIF_CTRL1_CLR, BM_LCDIF_CTRL1_RESET);
+		mdelay(1);
+		_lcdif_write(HW_LCDIF_CTRL1_SET, BM_LCDIF_CTRL1_RESET);
+		mdelay(10);
 
 		/* for external LCD */
 		_lcd_panel_init();
