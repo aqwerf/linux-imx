@@ -580,8 +580,13 @@ static int timekeeping_resume(struct sys_device *dev)
 	if (timespec_compare(&ts, &timekeeping_suspend_time) > 0) {
 		ts = timespec_sub(ts, timekeeping_suspend_time);
 		xtime = timespec_add_safe(xtime, ts);
+#ifdef CONFIG_MACH_MX23_CANOPUS
+		/* Simple Hack
+		 * Canopus monotonic time include total_sleep_time.*/
+#else
 		wall_to_monotonic = timespec_sub(wall_to_monotonic, ts);
 		total_sleep_time = timespec_add_safe(total_sleep_time, ts);
+#endif
 	}
 	/* re-base the last cycle value */
 	timekeeper.clock->cycle_last = timekeeper.clock->read(timekeeper.clock);
