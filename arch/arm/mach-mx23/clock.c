@@ -1630,6 +1630,20 @@ void __init mx23_set_input_clk(unsigned long xtal0,
 
 }
 
+static struct timespec persistent_ts;
+static u32 last_ms;
+void read_persistent_clock(struct timespec *ts)
+{
+	struct timespec *tsp = &persistent_ts;
+	u32 ms = __raw_readl(RTC_BASE_ADDR + HW_RTC_MILLISECONDS);
+	s32 diff = (s32)(ms - last_ms);
+	last_ms = ms;
+
+	if (diff > 0)
+		timespec_add_ns(tsp, (u64)diff * 1000000);
+	*ts = *tsp;
+}
+
 void __init mx23_clock_init(void)
 {
 	int i;
