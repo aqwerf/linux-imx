@@ -259,6 +259,19 @@ static int volume_key_process(struct mxskbd_data *d)
 	return -1;
 }
 
+static int unjitter_key(int index, int key)
+{
+	static int last[MAX_CH - 1];
+	static int val[MAX_CH - 1];
+
+	if (last[index] == key)
+		val[index] = key;
+	else
+		last[index] = key;
+
+	return val[index];
+}
+
 static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 {
 	struct platform_device *pdev = dev_id;
@@ -317,6 +330,7 @@ static irqreturn_t mxskbd_irq_handler(int irq, void *dev_id)
 
 		key = mxskbd_decode_button(d->keycodes +
 					   d->keycodes_offset*i, norm);
+		key = unjitter_key(i, key);
 
 #ifdef DUMP_KEY_ADC
 		val[i] = raw;
