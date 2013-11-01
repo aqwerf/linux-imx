@@ -798,6 +798,10 @@ mxs_codec_adc_power_on(struct mxs_codec_priv *mxs_adc)
 	__raw_writel(BM_AUDIOIN_ANACLKCTRL_CLKGATE,
 			REGS_AUDIOIN_BASE + HW_AUDIOIN_ANACLKCTRL_CLR);
 
+	/* Power Up ADC */
+	__raw_writel(BM_AUDIOOUT_PWRDN_ADC | BM_AUDIOOUT_PWRDN_RIGHT_ADC,
+		      REGS_AUDIOOUT_BASE + HW_AUDIOOUT_PWRDN_CLR);
+
 	/* 16 bit word length */
 	__raw_writel(BM_AUDIOIN_CTRL_WORD_LENGTH,
 		      REGS_AUDIOIN_BASE + HW_AUDIOIN_CTRL_SET);
