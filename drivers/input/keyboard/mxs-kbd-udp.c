@@ -215,22 +215,34 @@ static void jack_process(struct mxskbd_data *d)
 	int pin;
 	int in;
 	int jack;
+	static int amp_on_cnt;
+	static int amp;
 
 	pin = !!mxs_audio_jack_gpio_get();
+	if (pin)
+		amp_on_cnt = 10;
+	else if (amp_on_cnt > 0)
+		amp_on_cnt--;
+
+	if (amp_on_cnt > 0) {
+		if (!amp) {
+			mxs_audio_headset_mic_detect_amp_gpio_set(1);
+			amp = 1;
+		}
+	} else {
+		if (amp) {
+			mxs_audio_headset_mic_detect_amp_gpio_set(0);
+			amp = 0;
+		}
+	}
+
 	if (!!d->jack_last == pin) {
-		if (d->jack_cnt)
-			mxs_audio_headset_mic_detect_amp_gpio_set(pin);
 		d->jack_cnt = 0;
 		return;
 	}
 
-	mxs_audio_headset_mic_detect_amp_gpio_set(pin);
-
 	if (++d->jack_cnt <= 6)
 		return;
-
-	/* changed */
-	d->jack_cnt = 0;
 
 	if (pin == 0) {		/* eject */
 		in = 0;
