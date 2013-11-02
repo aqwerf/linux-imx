@@ -310,10 +310,10 @@ static int poll_select_copy_remaining(struct timespec *end_time, void __user *p,
 		rtv.tv_usec = rts.tv_nsec / NSEC_PER_USEC;
 
 		if (!copy_to_user(p, &rtv, sizeof(rtv)))
-			return ret;
+			;
 
 	} else if (!copy_to_user(p, &rts, sizeof(rts)))
-		return ret;
+		;
 
 	/*
 	 * If an application puts its timeval in read-only memory, we
