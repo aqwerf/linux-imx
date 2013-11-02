@@ -969,7 +969,9 @@ void suspend_console(void)
 {
 	if (!console_suspend_enabled)
 		return;
+#if 0
 	printk("Suspending console(s) (use no_console_suspend to debug)\n");
+#endif
 	acquire_console_sem();
 	console_suspended = 1;
 	up(&console_sem);

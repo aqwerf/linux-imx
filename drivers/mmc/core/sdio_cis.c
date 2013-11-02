@@ -311,6 +311,8 @@ static int sdio_read_cis(struct mmc_card *card, struct sdio_func *func)
 			*prev = this;
 			prev = &this->next;
 
+#if 0
+/* CANOPUS : disable verbose trace during suspend/wakeup */
 			if (ret == -ENOENT) {
 				/* warn about unknown tuples */
 				printk(KERN_WARNING "%s: queuing unknown"
@@ -318,6 +320,7 @@ static int sdio_read_cis(struct mmc_card *card, struct sdio_func *func)
 				       mmc_hostname(card->host),
 				       tpl_code, tpl_link);
 			}
+#endif
 
 			/* keep on analyzing tuples */
 			ret = 0;

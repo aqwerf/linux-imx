@@ -113,8 +113,10 @@ static int try_to_freeze_tasks(bool sig_only)
 		} while_each_thread(g, p);
 		read_unlock(&tasklist_lock);
 	} else {
+#if 0
 		printk("(elapsed %d.%02d seconds) ", elapsed_csecs / 100,
 			elapsed_csecs % 100);
+#endif
 	}
 
 	return todo ? -EBUSY : 0;
@@ -127,22 +129,32 @@ int freeze_processes(void)
 {
 	int error;
 
+#if 0
 	printk("Freezing user space processes ... ");
+#endif
 	error = try_to_freeze_tasks(true);
 	if (error)
 		goto Exit;
+#if 0
 	printk("done.\n");
+#endif
 
+#if 0
 	printk("Freezing remaining freezable tasks ... ");
+#endif
 	error = try_to_freeze_tasks(false);
 	if (error)
 		goto Exit;
+#if 0
 	printk("done.");
+#endif
 
 	oom_killer_disable();
  Exit:
 	BUG_ON(in_atomic());
+#if 0
 	printk("\n");
+#endif
 
 	return error;
 }
@@ -171,10 +183,14 @@ void thaw_processes(void)
 {
 	oom_killer_enable();
 
+#if 0
 	printk("Restarting tasks ... ");
+#endif
 	thaw_tasks(true);
 	thaw_tasks(false);
 	schedule();
+#if 0
 	printk("done.\n");
+#endif
 }
 

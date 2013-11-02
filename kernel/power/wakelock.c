@@ -280,10 +280,12 @@ static void suspend(struct work_struct *work)
 		struct rtc_time tm;
 		getnstimeofday(&ts);
 		rtc_time_to_tm(ts.tv_sec, &tm);
-		pr_info("suspend: exit suspend, ret = %d "
-			"(%d-%02d-%02d %02d:%02d:%02d.%09lu UTC)\n", ret,
-			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-			tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
+		if (debug_mask & DEBUG_SUSPEND)
+			pr_info("suspend: exit suspend, ret = %d "
+				"(%d-%02d-%02d %02d:%02d:%02d.%09lu UTC)\n", 
+				ret,
+				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+				tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
 	}
 	if (current_event_num == entry_event_num) {
 		if (debug_mask & DEBUG_SUSPEND)
@@ -403,7 +405,7 @@ static void wake_lock_internal(
 #ifdef CONFIG_WAKELOCK_STAT
 	if (type == WAKE_LOCK_SUSPEND && wait_for_wakeup) {
 		if (debug_mask & DEBUG_WAKEUP)
-			pr_info("wakeup wake lock: %s\n", lock->name);
+			pr_info("wakeup: %s\n", lock->name);
 		wait_for_wakeup = 0;
 		lock->stat.wakeup_count++;
 	}
