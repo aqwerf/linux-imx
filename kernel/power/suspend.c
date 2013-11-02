@@ -35,6 +35,14 @@ const char *const pm_states[PM_SUSPEND_MAX] = {
 
 static struct platform_suspend_ops *suspend_ops;
 
+extern void read_persistent_clock(struct timespec *ts);
+static void trace_pm(const char* str)
+{
+	struct timespec ts;
+	read_persistent_clock(&ts);
+	printk("%d.%03d %s\n", (int)ts.tv_sec, (int)ts.tv_nsec / 1000000, str);
+}
+
 /**
  *	suspend_set_ops - Set the global suspend method table.
  *	@ops:	Pointer to ops structure.
@@ -166,12 +174,17 @@ static int suspend_enter(suspend_state_t state)
 
 	error = sysdev_suspend(PMSG_SUSPEND);
 	if (!error) {
-		if (!suspend_test(TEST_CORE))
+		if (!suspend_test(TEST_CORE)) {
+			trace_pm("Suspended");
 			error = suspend_ops->enter(state);
+			trace_pm("Wake up");
+		}
 		sysdev_resume();
+		trace_pm("Sysdev");
 	}
 
 	arch_suspend_enable_irqs();
+	trace_pm("Enable IRQ");
 	BUG_ON(irqs_disabled());
 
  Enable_cpus:
@@ -180,13 +193,16 @@ static int suspend_enter(suspend_state_t state)
  Platform_wake:
 	if (suspend_ops->wake)
 		suspend_ops->wake();
+	trace_pm("Platform wak");
 
  Power_up_devices:
 	dpm_resume_noirq(PMSG_RESUME);
+	trace_pm("DPM Resume");
 
  Platfrom_finish:
 	if (suspend_ops->finish)
 		suspend_ops->finish();
+	trace_pm("Platform Finish");
 
 	return error;
 }
@@ -209,6 +225,7 @@ int suspend_devices_and_enter(suspend_state_t state)
 		if (error)
 			goto Close;
 	}
+	trace_pm("Suspending");
 	suspend_console();
 	saved_mask = clear_gfp_allowed_mask(GFP_IOFS);
 	suspend_test_start();

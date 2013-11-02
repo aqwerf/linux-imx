@@ -465,6 +465,14 @@ aux_driver:
 }
 EXPORT_SYMBOL_GPL(sysdev_suspend);
 
+extern void read_persistent_clock(struct timespec *ts);
+static void trace_pm(const char* str)
+{
+	struct timespec ts;
+	read_persistent_clock(&ts);
+	printk("%d.%03d %s\n", (int)ts.tv_sec, (int)ts.tv_nsec / 1000000, str);
+}
+
 /**
  *	sysdev_resume - Bring system devices back to life.
  *
@@ -490,7 +498,7 @@ int sysdev_resume(void)
 
 		list_for_each_entry(sysdev, &cls->kset.list, kobj.entry) {
 			pr_debug(" %s\n", kobject_name(&sysdev->kobj));
-
+			trace_pm(kobject_name(&sysdev->kobj));
 			__sysdev_resume(sysdev);
 		}
 	}
