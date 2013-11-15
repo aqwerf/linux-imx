@@ -180,7 +180,6 @@ static int suspend_enter(suspend_state_t state)
 			trace_pm("Wake up");
 		}
 		sysdev_resume();
-		trace_pm("Sysdev");
 	}
 
 	arch_suspend_enable_irqs();
@@ -193,16 +192,13 @@ static int suspend_enter(suspend_state_t state)
  Platform_wake:
 	if (suspend_ops->wake)
 		suspend_ops->wake();
-	trace_pm("Platform wak");
 
  Power_up_devices:
 	dpm_resume_noirq(PMSG_RESUME);
-	trace_pm("DPM Resume");
 
  Platfrom_finish:
 	if (suspend_ops->finish)
 		suspend_ops->finish();
-	trace_pm("Platform Finish");
 
 	return error;
 }
