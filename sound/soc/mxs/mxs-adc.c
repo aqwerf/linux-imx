@@ -376,34 +376,37 @@ static int mxs_adc_startup(struct snd_pcm_substream *substream,
 	int irq;
 	int irq_short;
 	int ret;
-
-	INIT_DELAYED_WORK(&work, mxs_adc_work);
-	INIT_DELAYED_WORK(&adc_ramp_work, mxs_adc_ramp_work);
-	INIT_DELAYED_WORK(&dac_ramp_work, mxs_dac_ramp_work);
+	const char *irq_name;
 
 	if (playback) {
+		INIT_DELAYED_WORK(&work, mxs_adc_work);
+		INIT_DELAYED_WORK(&dac_ramp_work, mxs_dac_ramp_work);
 		irq = IRQ_DAC_ERROR;
+		irq_name = "MXS DAC Error";
 		snd_soc_dai_set_dma_data(dai, substream, &mxs_audio_out);
 	} else {
+		INIT_DELAYED_WORK(&adc_ramp_work, mxs_adc_ramp_work);
 		irq = IRQ_ADC_ERROR;
+		irq_name = "MXS ADC Error";
 		snd_soc_dai_set_dma_data(dai, substream, &mxs_audio_in);
 	}
 
-	ret = request_irq(irq, mxs_err_irq, 0, "MXS DAC and ADC Error",
-			  substream);
+	ret = request_irq(irq, mxs_err_irq, 0, irq_name, substream);
 	if (ret) {
 		printk(KERN_ERR "%s: Unable to request ADC/DAC error irq %d\n",
 		       __func__, IRQ_DAC_ERROR);
 		return ret;
 	}
 
-	irq_short = IRQ_HEADPHONE_SHORT;
-	ret = request_irq(irq_short, mxs_short_irq,
-		IRQF_DISABLED | IRQF_SHARED, "MXS DAC and ADC HP SHORT", substream);
-	if (ret) {
-		printk(KERN_ERR "%s: Unable to request ADC/DAC HP SHORT irq %d\n",
-		       __func__, IRQ_DAC_ERROR);
-		return ret;
+	if (playback) {
+		irq_short = IRQ_HEADPHONE_SHORT;
+		ret = request_irq(irq_short, mxs_short_irq,
+				  IRQF_DISABLED | IRQF_SHARED, "MXS DAC and ADC HP SHORT", substream);
+		if (ret) {
+			printk(KERN_ERR "%s: Unable to request ADC/DAC HP SHORT irq %d\n",
+			       __func__, IRQ_DAC_ERROR);
+			return ret;
+		}
 	}
 
 	/* Enable error interrupt */
@@ -434,6 +437,7 @@ static void mxs_adc_shutdown(struct snd_pcm_substream *substream,
 		__raw_writel(BM_AUDIOOUT_CTRL_FIFO_ERROR_IRQ_EN,
 			REGS_AUDIOOUT_BASE + HW_AUDIOOUT_CTRL_CLR);
 		free_irq(IRQ_DAC_ERROR, substream);
+		free_irq(IRQ_HEADPHONE_SHORT, substream);
 	} else {
 		__raw_writel(BM_AUDIOIN_CTRL_FIFO_ERROR_IRQ_EN,
 			REGS_AUDIOIN_BASE + HW_AUDIOIN_CTRL_CLR);
