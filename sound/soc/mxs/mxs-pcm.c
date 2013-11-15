@@ -317,7 +317,8 @@ static int mxs_pcm_dma_request(struct snd_pcm_substream *substream)
 	}
 
 	ret = request_irq(prtd->params->irq, mxs_pcm_dma_irq, 0,
-			  "MXS PCM DMA", substream);
+			  (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ?
+			  "MXS DAC PCM DMA" : "MXS ADC PCM DMA", substream);
 	if (ret) {
 		printk(KERN_ERR "%s: Unable to request DMA irq %d\n", __func__,
 		       prtd->params->irq);
