@@ -59,6 +59,7 @@ static int notifier_chain_unregister(struct notifier_block **nl,
 	return -ENOENT;
 }
 
+extern void trace_pm(const char* str, ...);
 /**
  * notifier_call_chain - Informs the registered notifiers about an event.
  *	@nl:		Pointer to head of the blocking notifier chain
@@ -90,6 +91,8 @@ static int __kprobes notifier_call_chain(struct notifier_block **nl,
 			continue;
 		}
 #endif
+		if (val == 6 /* CLOCK_EVT_NOTIFY_SUSPEND */)
+			trace_pm("TS %p", nb->notifier_call);
 		ret = nb->notifier_call(nb, val, v);
 
 		if (nr_calls)

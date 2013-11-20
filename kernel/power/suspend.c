@@ -36,11 +36,17 @@ const char *const pm_states[PM_SUSPEND_MAX] = {
 static struct platform_suspend_ops *suspend_ops;
 
 extern void read_persistent_clock(struct timespec *ts);
-static void trace_pm(const char* str)
+void trace_pm(const char* str, ...)
 {
+	va_list args;
+	char buf[200];
 	struct timespec ts;
 	read_persistent_clock(&ts);
-	printk("%d.%03d %s\n", (int)ts.tv_sec, (int)ts.tv_nsec / 1000000, str);
+
+	va_start(args, str);
+	vsprintf(buf, str, args);
+	va_end(args);
+	printk("%d.%03d %s\n", (int)ts.tv_sec, (int)ts.tv_nsec / 1000000, buf);
 }
 
 /**
@@ -172,6 +178,7 @@ static int suspend_enter(suspend_state_t state)
 	arch_suspend_disable_irqs();
 	BUG_ON(!irqs_disabled());
 
+	trace_pm("Sysdev Suspend");
 	error = sysdev_suspend(PMSG_SUSPEND);
 	if (!error) {
 		if (!suspend_test(TEST_CORE)) {
