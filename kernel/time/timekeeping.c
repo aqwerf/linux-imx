@@ -604,19 +604,23 @@ static int timekeeping_resume(struct sys_device *dev)
 	return 0;
 }
 
+extern void trace_pm(const char* str, ...);
 static int timekeeping_suspend(struct sys_device *dev, pm_message_t state)
 {
 	unsigned long flags;
 
 	read_persistent_clock(&timekeeping_suspend_time);
-
+	trace_pm("TS_SUS 1");
 	write_seqlock_irqsave(&xtime_lock, flags);
 	timekeeping_forward_now();
 	timekeeping_suspended = 1;
 	write_sequnlock_irqrestore(&xtime_lock, flags);
+	trace_pm("TS_SUS 2");
 
 	clockevents_notify(CLOCK_EVT_NOTIFY_SUSPEND, NULL);
+	trace_pm("TS_SUS 3");
 	clocksource_suspend();
+	trace_pm("TS_SUS 4");
 
 	return 0;
 }

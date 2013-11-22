@@ -421,7 +421,7 @@ int sysdev_suspend(pm_message_t state)
 
 			/* Now call the generic one */
 			if (cls->suspend) {
-				trace_pm("CS %s: %p", kobject_name(&sysdev->kobj), drv->suspend);
+				trace_pm("CS %s: %p", kobject_name(&sysdev->kobj), cls->suspend);
 				ret = cls->suspend(sysdev, state);
 				if (ret)
 					goto cls_driver;
