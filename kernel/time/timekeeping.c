@@ -173,6 +173,7 @@ void timekeeping_leap_insert(int leapsecond)
 	update_vsyscall(&xtime, timekeeper.clock, timekeeper.mult);
 }
 
+extern void trace_pm(const char* str, ...);
 #ifdef CONFIG_GENERIC_TIME
 
 /**
@@ -188,21 +189,31 @@ static void timekeeping_forward_now(void)
 	struct clocksource *clock;
 	s64 nsec;
 
+	trace_pm("TS_SUS 1-1-0");
 	clock = timekeeper.clock;
 	cycle_now = clock->read(clock);
 	cycle_delta = (cycle_now - clock->cycle_last) & clock->mask;
 	clock->cycle_last = cycle_now;
+	trace_pm("TS_SUS 1-1-1(0x%llx, 0x%llx, 0x%llx)", clock->cycle_last,
+		 cycle_now, cycle_delta);
 
 	nsec = clocksource_cyc2ns(cycle_delta, timekeeper.mult,
 				  timekeeper.shift);
+	trace_pm("TS_SUS 1-1-2(0x%llx, 0x%x, 0x%x, 0x%x, 0x%x)", nsec,
+		 timekeeper.mult, timekeeper.shift, xtime.tv_sec, xtime.tv_nsec);
 
 	/* If arch requires, add in gettimeoffset() */
 	nsec += arch_gettimeoffset();
+	trace_pm("TS_SUS 1-1-3(0x%llx)", nsec);
 
 	timespec_add_ns(&xtime, nsec);
+	trace_pm("TS_SUS 1-1-4");
 
 	nsec = clocksource_cyc2ns(cycle_delta, clock->mult, clock->shift);
+	trace_pm("TS_SUS 1-1-5(0x%llx, 0x%x, 0x%x, 0x%x, 0x%x)",
+		 nsec, clock->mult, clock->shift, raw_time.tv_sec, raw_time.tv_nsec);
 	timespec_add_ns(&raw_time, nsec);
+	trace_pm("TS_SUS 1-1-6");
 }
 
 /**
@@ -604,7 +615,6 @@ static int timekeeping_resume(struct sys_device *dev)
 	return 0;
 }
 
-extern void trace_pm(const char* str, ...);
 static int timekeeping_suspend(struct sys_device *dev, pm_message_t state)
 {
 	unsigned long flags;
