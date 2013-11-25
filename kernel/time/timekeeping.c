@@ -612,8 +612,11 @@ static int timekeeping_suspend(struct sys_device *dev, pm_message_t state)
 	read_persistent_clock(&timekeeping_suspend_time);
 	trace_pm("TS_SUS 1");
 	write_seqlock_irqsave(&xtime_lock, flags);
+	trace_pm("TS_SUS 1-1");
 	timekeeping_forward_now();
+	trace_pm("TS_SUS 1-2");
 	timekeeping_suspended = 1;
+	trace_pm("TS_SUS 1-3");
 	write_sequnlock_irqrestore(&xtime_lock, flags);
 	trace_pm("TS_SUS 2");
 
