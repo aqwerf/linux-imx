@@ -56,8 +56,6 @@ mxs_nomatch_timer_interrupt(int irq, void *dev_id)
 				online_timer->base + HW_TIMROT_TIMCTRLn_CLR(1));
 		__raw_writel(BM_TIMROT_TIMCTRLn_IRQ_EN,
 				online_timer->base + HW_TIMROT_TIMCTRLn_CLR(1));
-		__raw_writel(0xFFFF,
-				online_timer->base + HW_TIMROT_TIMCOUNTn(1));
 	}
 
 	return IRQ_HANDLED;
@@ -200,11 +198,6 @@ void mxs_nomatch_resume_timer(void)
 			online_timer->base  + HW_TIMROT_TIMCTRLn(1));
 	__raw_writel(clk_get_rate(online_timer->clk) / HZ - 1,
 			online_timer->base  + HW_TIMROT_TIMCOUNTn(0));
-	while (((__raw_readl(online_timer->base + HW_TIMROT_TIMCOUNTn(1))
-				& 0xFFFF0000) >> 16) != 0xFFFF) {
-		__raw_writel(0xFFFF,
-				online_timer->base + HW_TIMROT_TIMCOUNTn(1));
-	}
 }
 
 #else
