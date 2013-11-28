@@ -367,7 +367,6 @@ static void __sysdev_resume(struct sys_device *dev)
 	}
 }
 
-extern void trace_pm(const char* str, ...);
 /**
  *	sysdev_suspend - Suspend all system devices.
  *	@state:		Power state to enter.
@@ -409,7 +408,6 @@ int sysdev_suspend(pm_message_t state)
 			/* Call auxillary drivers first */
 			list_for_each_entry(drv, &cls->drivers, entry) {
 				if (drv->suspend) {
-					trace_pm("DS %s: %p", kobject_name(&sysdev->kobj), drv->suspend);
 					ret = drv->suspend(sysdev, state);
 					if (ret)
 						goto aux_driver;
@@ -421,7 +419,6 @@ int sysdev_suspend(pm_message_t state)
 
 			/* Now call the generic one */
 			if (cls->suspend) {
-				trace_pm("CS %s: %p", kobject_name(&sysdev->kobj), cls->suspend);
 				ret = cls->suspend(sysdev, state);
 				if (ret)
 					goto cls_driver;
@@ -493,6 +490,7 @@ int sysdev_resume(void)
 
 		list_for_each_entry(sysdev, &cls->kset.list, kobj.entry) {
 			pr_debug(" %s\n", kobject_name(&sysdev->kobj));
+
 			__sysdev_resume(sysdev);
 		}
 	}
