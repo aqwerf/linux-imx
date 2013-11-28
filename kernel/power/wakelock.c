@@ -31,7 +31,7 @@ enum {
 	DEBUG_EXPIRE = 1U << 3,
 	DEBUG_WAKE_LOCK = 1U << 4,
 };
-static int debug_mask = DEBUG_EXIT_SUSPEND | DEBUG_WAKEUP;
+static int debug_mask = DEBUG_EXIT_SUSPEND | DEBUG_SUSPEND;
 module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 #define WAKE_LOCK_TYPE_MASK              (0x0f)
@@ -253,8 +253,10 @@ long has_wake_lock(int type)
 	unsigned long irqflags;
 	spin_lock_irqsave(&list_lock, irqflags);
 	ret = has_wake_lock_locked(type);
+#if 0
 	if (ret && (debug_mask & DEBUG_SUSPEND) && type == WAKE_LOCK_SUSPEND)
 		print_active_locks(type);
+#endif
 	spin_unlock_irqrestore(&list_lock, irqflags);
 	return ret;
 }
@@ -263,29 +265,31 @@ static void suspend(struct work_struct *work)
 {
 	int ret;
 	int entry_event_num;
+	struct timespec start;
 
 	if (has_wake_lock(WAKE_LOCK_SUSPEND)) {
 		if (debug_mask & DEBUG_SUSPEND)
-			pr_info("suspend: abort suspend\n");
+			pr_info("Abort\n");
 		return;
 	}
 
 	entry_event_num = current_event_num;
 	sys_sync();
-	if (debug_mask & DEBUG_SUSPEND)
-		pr_info("suspend: enter suspend\n");
+	if (debug_mask & DEBUG_SUSPEND) {
+		read_persistent_clock(&start);
+		pr_info("%d.%03d Enter\n", start.tv_sec,
+			start.tv_nsec / 1000000);
+	}
 	ret = pm_suspend(requested_suspend_state);
 	if (debug_mask & DEBUG_EXIT_SUSPEND) {
 		struct timespec ts;
-		struct rtc_time tm;
-		getnstimeofday(&ts);
-		rtc_time_to_tm(ts.tv_sec, &tm);
+		read_persistent_clock(&ts);
+		set_normalized_timespec(&start, ts.tv_sec - start.tv_sec,
+					ts.tv_nsec - start.tv_nsec);
 		if (debug_mask & DEBUG_SUSPEND)
-			pr_info("suspend: exit suspend, ret = %d "
-				"(%d-%02d-%02d %02d:%02d:%02d.%09lu UTC)\n", 
-				ret,
-				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-				tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
+			pr_info("%d.%03d Exit (%d.%03d)\n",
+				ts.tv_sec, ts.tv_nsec / 1000000,
+				start.tv_sec, start.tv_nsec / 1000000);
 	}
 	if (current_event_num == entry_event_num) {
 		if (debug_mask & DEBUG_SUSPEND)
@@ -302,8 +306,10 @@ static void expire_wake_locks(unsigned long data)
 	if (debug_mask & DEBUG_EXPIRE)
 		pr_info("expire_wake_locks: start\n");
 	spin_lock_irqsave(&list_lock, irqflags);
+#if 0
 	if (debug_mask & DEBUG_SUSPEND)
 		print_active_locks(WAKE_LOCK_SUSPEND);
+#endif
 	has_lock = has_wake_lock_locked(WAKE_LOCK_SUSPEND);
 	if (debug_mask & DEBUG_EXPIRE)
 		pr_info("expire_wake_locks: done, has_lock %ld\n", has_lock);
@@ -319,8 +325,10 @@ static int power_suspend_late(struct device *dev)
 #ifdef CONFIG_WAKELOCK_STAT
 	wait_for_wakeup = 1;
 #endif
+#if 0
 	if (debug_mask & DEBUG_SUSPEND)
 		pr_info("power_suspend_late return %d\n", ret);
+#endif
 	return ret;
 }
 
