@@ -267,9 +267,7 @@ static int pga_event(struct snd_soc_dapm_widget *w,
 			REGS_AUDIOOUT_BASE + HW_AUDIOOUT_ANACTRL_SET);
 		__raw_writel(BM_RTC_PERSISTENT0_RELEASE_GND,
 			REGS_RTC_BASE + HW_RTC_PERSISTENT0_SET);
-#ifndef CONFIG_MACH_MX23_CANOPUS
 		msleep(100);
-#endif
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		__raw_writel(BM_AUDIOOUT_ANACTRL_HP_HOLD_GND,
@@ -290,9 +288,7 @@ static int adc_event(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_PRE_PMU:
 		__raw_writel(BM_RTC_PERSISTENT0_RELEASE_GND,
 			REGS_RTC_BASE + HW_RTC_PERSISTENT0_SET);
-#ifndef CONFIG_MACH_MX23_CANOPUS
 		msleep(100);
-#endif
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		__raw_writel(BM_RTC_PERSISTENT0_RELEASE_GND,

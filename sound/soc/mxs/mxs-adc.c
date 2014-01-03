@@ -312,9 +312,7 @@ static int mxs_adc_trigger(struct snd_pcm_substream *substream,
 
 		    __raw_writel(BM_AUDIOIN_CTRL_RUN,
 			REGS_AUDIOIN_BASE + HW_AUDIOIN_CTRL_SET);
-#ifndef CONFIG_MACH_MX23_CANOPUS
 		    udelay(100);
-#endif
 		    mxs_dma_get_info(prtd->dma_ch, &dma_info);
 		    cur_bar2 = dma_info.buf_addr;
 		    xfer_count2 = dma_info.xfer_count;
@@ -342,9 +340,7 @@ static int mxs_adc_trigger(struct snd_pcm_substream *substream,
 			/* disable the fifo error interrupt */
 			__raw_writel(BM_AUDIOOUT_CTRL_FIFO_ERROR_IRQ_EN,
 				REGS_AUDIOOUT_BASE + HW_AUDIOOUT_CTRL_CLR);
-#ifndef CONFIG_MACH_MX23_CANOPUS
 			mdelay(50);
-#endif
 		} else {
 			if (adc_ramp_done == 0) {
 				cancel_delayed_work(&adc_ramp_work);
